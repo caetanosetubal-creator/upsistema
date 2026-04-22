@@ -996,15 +996,17 @@ function salvarScriptUrl(){
 }
 
 // ── Chamada à API do Apps Script ──────────────────────────────
-async function gsApi(payload={}){
+async function gsApi(payload){
   if(!SCRIPT_URL)throw new Error('URL não configurada');
-  const url=new URL(SCRIPT_URL);
-  if(payload&&payload.action)url.searchParams.set('action',payload.action);
-  const res=await fetch(url.toString(),{method:'GET',redirect:'follow',cache:'no-store'});
-  if(!res.ok)throw new Error('Erro HTTP '+res.status);
-  const raw=await res.json();
-  if(raw&&raw.success===false)throw new Error(raw.error||'Erro na API');
-  return raw&&raw.data!==undefined ? raw.data : raw;
+  const res=await fetch(SCRIPT_URL,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify(payload),
+    redirect:'follow'
+  });
+  const data=await res.json();
+  if(!data.ok)throw new Error(data.error||'Erro na API');
+  return data;
 }
 
 // ── Carregar: localStorage primeiro, depois Sheets ─────────────
@@ -1015,9 +1017,19 @@ function loadS(){
   });
   normalizeCfg();
   normalizeContratos();
+  syncConfigInputs();
   // Preenche URL salva no campo de config
   const urlEl=document.getElementById('cfg-sheets-url');
   if(urlEl&&SCRIPT_URL)urlEl.value=SCRIPT_URL;
+}
+
+function syncConfigInputs(){
+  const metaEl=document.getElementById('cfg-meta');
+  const orcEl=document.getElementById('cfg-o1');
+  const nomeEl=document.getElementById('cfg-nome');
+  if(metaEl)metaEl.value=num(S.cfg.meta||10000000);
+  if(orcEl)orcEl.value=num(S.cfg.o1||0);
+  if(nomeEl)nomeEl.value=S.cfg.nome||'A Um Passo da Escritura';
 }
 
 // ── Salvar: localStorage + push ao Sheets (async, não bloqueia) ─
@@ -1030,32 +1042,47 @@ function saveS(){
 
 // ── Push: envia todos os dados ao Sheets ──────────────────────
 async function pushToSheets(){
-  // Apps Script atual está configurado apenas para leitura (doGet).
-  // Mantemos o salvamento local sem marcar erro falso de conexão.
-  const el=document.getElementById('upd-txt');
-  if(el)el.textContent='Salvo local '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  console.log('Sheets push ignorado: Apps Script em modo leitura.');
-  return true;
+  try{
+    const payload={action:'saveAll',data:{
+      contratos:S.contratos,
+      acoes:S.acoes,
+      categorias:S.categorias,
+      micros:S.micros,
+      gastos:S.gastos,
+      midia:S.midia,
+      cfg:S.cfg
+    }};
+    await gsApi(payload);
+    setConn(true);
+    const el=document.getElementById('upd-txt');
+    if(el)el.textContent='Salvo + Sheets '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){
+    setConn(false,'● Salvo local — Sheets offline');
+    console.warn('Sheets push:',e.message);
+  }
 }
 
 // ── Pull: puxa dados do Sheets → sobrescreve local ────────────
 async function pullFromSheets(){
-  if(!SCRIPT_URL){setConn(false,'● Sem URL configurada');return false;}
+  if(!SCRIPT_URL){setConn(false,'● Sem URL configurada');return;}
   try{
-    const d=await gsApi({action:'getAll'});
-    if(Array.isArray(d?.contratos))S.contratos=d.contratos;
-    if(Array.isArray(d?.acoes))S.acoes=d.acoes;
-    if(Array.isArray(d?.categorias))S.categorias=d.categorias;
-    if(Array.isArray(d?.micros))S.micros=d.micros;
-    if(Array.isArray(d?.gastos))S.gastos=d.gastos;
-    if(Array.isArray(d?.midia))S.midia=d.midia;
-    if(d?.cfg)S.cfg=Array.isArray(d.cfg)?d.cfg:{...S.cfg,...d.cfg};
-    normalizeCfg();
-    normalizeContratos();
-    SHEETS_KEYS.forEach(k=>localStorage.setItem('up5_'+k,JSON.stringify(S[k])));
+    const r=await gsApi({action:'getAll'});
+    if(r.data){
+      const d=r.data;
+      if(Array.isArray(d.contratos))S.contratos=d.contratos;
+      if(Array.isArray(d.acoes))S.acoes=d.acoes;
+      if(Array.isArray(d.categorias))S.categorias=d.categorias;
+      if(Array.isArray(d.micros))S.micros=d.micros;
+      if(Array.isArray(d.gastos))S.gastos=d.gastos;
+      if(Array.isArray(d.midia))S.midia=d.midia;
+      if(d.cfg)S.cfg=Array.isArray(d.cfg)?d.cfg:{...S.cfg,...d.cfg};
+      normalizeCfg();
+      normalizeContratos();
+      syncConfigInputs();
+      SHEETS_KEYS.forEach(k=>localStorage.setItem('up5_'+k,JSON.stringify(S[k])));
+    }
     setConn(true);
-    const upd=document.getElementById('upd-txt');
-    if(upd)upd.textContent='Sheets: '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('upd-txt').textContent='Sheets: '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     return true;
   }catch(e){
     setConn(false,'● Offline — cache local');
@@ -1097,13 +1124,15 @@ function iniciarPolling(){
 async function inicializarSheets(){
   if(!SCRIPT_URL){toast('Salve a URL do Apps Script primeiro','err');return;}
   const msg=document.getElementById('sheets-msg');
-  if(msg)msg.textContent='Validando conexão com a planilha...';
+  if(msg)msg.textContent='Inicializando planilha...';
   try{
-    const ok=await pullFromSheets();
-    if(!ok)throw new Error('Não foi possível ler a planilha');
+    const r=await gsApi({action:'init'});
+    setConn(true);
     iniciarPolling();
-    toast('Planilha conectada! Leitura ativa ✓','ok');
-    if(msg)msg.textContent='Planilha conectada. Polling ativo a cada 5 min.';
+    // Push dos dados atuais para a planilha
+    await pushToSheets();
+    toast(r.message||'Planilha inicializada! Dados enviados ✓','ok');
+    if(msg)msg.textContent='Planilha pronta. Polling ativo a cada 5 min.';
   }catch(e){
     toast('Erro: '+e.message,'err');
     if(msg)msg.textContent='Erro: '+e.message;
@@ -1268,8 +1297,34 @@ function selecionarCondFin(n,vOrig,vTotal){
 function calcContrato(){selectedCond='';const a=Number(document.getElementById('cc-area').value||0);const p=Number(document.getElementById('cc-pm2').value||0);if(a&&p)document.getElementById('cc-valor').value=Math.round(a*p);renderSimulador();}
 
 // ═══ HELPERS ═══
-const BRL=v=>'R$ '+Math.round(Number(v)||0).toLocaleString('pt-BR');
-const pct=(a,b)=>b?Math.min(Math.round(a/b*100),999):0;
+const num=v=>{
+  if(typeof v==='number')return Number.isFinite(v)?v:0;
+  if(v===null||v===undefined)return 0;
+  let s=String(v).trim();
+  if(!s)return 0;
+  s=s.replace(/\s+/g,'').replace(/R\$/gi,'');
+  const dotCount=(s.match(/\./g)||[]).length;
+  const commaCount=(s.match(/,/g)||[]).length;
+  if(commaCount&&dotCount){
+    if(s.lastIndexOf(',')>s.lastIndexOf('.'))s=s.replace(/\./g,'').replace(',', '.');
+    else s=s.replace(/,/g,'');
+  }else if(commaCount){
+    if(/^-?\d{1,3}(\.\d{3})+,\d+$/.test(s))s=s.replace(/\./g,'').replace(',', '.');
+    else if(/^-?\d+,\d+$/.test(s))s=s.replace(',', '.');
+    else s=s.replace(/,/g,'');
+  }else if(dotCount){
+    if(/^-?\d{1,3}(\.\d{3})+$/.test(s))s=s.replace(/\./g,'');
+  }
+  const n=Number(s);
+  return Number.isFinite(n)?n:0;
+};
+const BRL=v=>'R$ '+Math.round(num(v)).toLocaleString('pt-BR');
+const pct=(a,b,dec=2)=>{
+  const aa=num(a),bb=num(b);
+  if(!bb)return 0;
+  return Number(Math.min((aa/bb)*100,999).toFixed(dec));
+};
+const fmtPct=v=>num(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
 const normKey=k=>String(k||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const pickField=(obj,variants=[])=>{
   if(!obj||typeof obj!=='object')return '';
@@ -1339,18 +1394,9 @@ const normalizeCfg=()=>{
     S.cfg={...obj};
   }
   if(!S.cfg||typeof S.cfg!=='object')S.cfg={};
-  const meta=Number(S.cfg.meta||S.cfg.m1||10000000);
-  const orc=Number(S.cfg.o1||S.cfg.orcamento||90000);
+  const meta=num(S.cfg.meta||S.cfg.m1||10000000);
+  const orc=num(S.cfg.o1||S.cfg.orcamento||90000);
   S.cfg={...S.cfg,meta:meta,o1:orc,nome:S.cfg.nome||'A Um Passo da Escritura',condoPadrao:S.cfg.condoPadrao||S.cfg.condominioPadrao||'JARDIM EUROPA II'};
-};
-const toNum=v=>{
-  if(v===null||v===undefined||v==='')return 0;
-  if(typeof v==='number')return isFinite(v)?v:0;
-  const s=String(v).trim().replace(/\s+/g,'');
-  if(!s)return 0;
-  const norm=s.includes(',') ? s.replace(/\./g,'').replace(',','.') : s;
-  const n=Number(norm.replace(/[^\d.-]/g,''));
-  return isFinite(n)?n:0;
 };
 const normalizeContratos=()=>{
   if(!Array.isArray(S.contratos))S.contratos=[];
@@ -1358,18 +1404,7 @@ const normalizeContratos=()=>{
     const condo=getCondoNome(c);
     const data=parseSheetDate(pickField(c,['data','Data','dt','date']));
     const pagamento=getPagamento(c);
-    const valorOriginal=toNum(c.valor);
-    const valorFinal=toNum(c.valorFinal||c.valor);
-    return {
-      ...c,
-      condo:condo&&condo!=='—'?condo:'',
-      condominio:condo&&condo!=='—'?condo:'',
-      pagto:pagamento,
-      pagamento:pagamento,
-      data:data||'',
-      valor:valorOriginal,
-      valorFinal:valorFinal
-    };
+    return {...c,condo:condo&&condo!=='—'?condo:'',condominio:condo&&condo!=='—'?condo:'',pagto:pagamento,pagamento:pagamento,data:data||'',valor:num(c.valor),valorFinal:num(c.valorFinal||c.valor),area:num(c.area),pm2:num(c.pm2)};
   });
 };
 const STATUS_B={'Concluído':'b-g','Em andamento':'b-b','Planejado':'b-z','Aguardando':'b-a','Pago':'b-g','Pendente':'b-a','Aprovado':'b-b','Em negociação':'b-a','Acordo assinado':'b-b','Escritura emitida':'b-t','Pausado':'b-z'};
@@ -1377,8 +1412,8 @@ const badge=(t,c)=>`<span class="b ${c||STATUS_B[t]||'b-z'}">${t}</span>`;
 const iconBtn=(tip,cls,cb)=>`<button class="icon-btn ${cls}" onclick="${cb}" title="${tip}"><span class="tip">${tip}</span>${cls==='edit'?'<span style="display:inline-block;transform:rotate(-45deg)">✏</span>':'🗑'}</button>`;
 
 // ═══ TOTAIS ═══
-const totalReceita=()=>S.contratos.reduce((s,c)=>s+Number(c.valorFinal||c.valor||0),0);
-const totalGasto=()=>S.gastos.filter(g=>g.status==='Pago').reduce((s,g)=>s+Number(g.valor||0),0);
+const totalReceita=()=>S.contratos.reduce((s,c)=>s+num(c.valorFinal||c.valor||0),0);
+const totalGasto=()=>S.gastos.filter(g=>g.status==='Pago').reduce((s,g)=>s+num(g.valor||0),0);
 
 // ═══ NAV ═══
 const TITLES={dashboard:'Dashboard',cronograma:'Cronograma',orcamento:'Orçamento',midia:'Plano de Mídia',contratos:'Contratos',relatorios:'Relatórios',config:'Configurações'};
@@ -1398,14 +1433,14 @@ function renderPage(p){({dashboard:renderDashboard,cronograma:renderCronograma,o
 
 // ═══ DASHBOARD ═══
 function renderDashboard(){
-  const rec=totalReceita(),gasto=totalGasto(),m1=Number(S.cfg.meta||S.cfg.m1||10000000),o1=Number(S.cfg.o1||0),p1=pct(rec,m1);
-  document.getElementById('sb-receita').textContent=BRL(rec);document.getElementById('sb-pct').textContent=`${p1}% da meta`;
-  document.getElementById('mf1').style.width=Math.min(p1,100)+'%';document.getElementById('mp1').textContent=`${p1}% atingido (${BRL(rec)})`;
-  document.getElementById('k1v').textContent=BRL(rec);document.getElementById('k1s').textContent=`${S.contratos.length} contrato(s) · ${p1}% da meta`;document.getElementById('k1b').style.width=Math.min(p1,100)+'%';
-  document.getElementById('k2v').textContent=BRL(gasto);document.getElementById('k2s').textContent=`${pct(gasto,o1)}% do orçamento`;document.getElementById('k2b').style.width=Math.min(pct(gasto,o1),100)+'%';
+  const rec=totalReceita(),gasto=totalGasto(),m1=num(S.cfg.meta||S.cfg.m1||10000000),o1=num(S.cfg.o1||0),p1=pct(rec,m1),p1Txt=fmtPct(p1),p2=pct(gasto,o1),p2Txt=fmtPct(p2);
+  document.getElementById('sb-receita').textContent=BRL(rec);document.getElementById('sb-pct').textContent=`${p1Txt} da meta`;
+  document.getElementById('mf1').style.width=Math.min(p1,100)+'%';document.getElementById('mp1').textContent=`${p1Txt} atingido (${BRL(rec)})`;
+  document.getElementById('k1v').textContent=BRL(rec);document.getElementById('k1s').textContent=`${S.contratos.length} contrato(s) · ${p1Txt} da meta`;document.getElementById('k1b').style.width=Math.min(p1,100)+'%';
+  document.getElementById('k2v').textContent=BRL(gasto);document.getElementById('k2s').textContent=`${p2Txt} do orçamento`;document.getElementById('k2b').style.width=Math.min(p2,100)+'%';
   const roi=gasto>0?(rec/gasto).toFixed(1)+'x':'—';document.getElementById('k3v').textContent=roi;document.getElementById('k3b').style.width=gasto>0?Math.min(pct(rec,gasto*8),100)+'%':'0%';
   // top 20
-  const rpC={};S.contratos.forEach(c=>{const condo=getCondoNome(c);if(condo!=='—')rpC[condo]=(rpC[condo]||0)+Number(c.valorFinal||c.valor||0);});
+  const rpC={};S.contratos.forEach(c=>{const condo=getCondoNome(c);if(condo!=='—')rpC[condo]=(rpC[condo]||0)+num(c.valorFinal||c.valor||0);});
   const maxV=TOP20[0].vgv;
   document.getElementById('dash-top20').innerHTML=TOP20.map((c,i)=>{
     const realRec=rpC[c.n]||0;
@@ -1435,13 +1470,13 @@ function renderDashboard(){
   }).join('');
   document.getElementById('dash-acoes').innerHTML=acTodas.length?acHtml:'<div class="empty" style="padding:16px">Nenhuma ação cadastrada.</div>';
   // orc mini
-  const gastoPorCat={};S.gastos.filter(g=>g.status==='Pago').forEach(g=>{gastoPorCat[g.cat]=(gastoPorCat[g.cat]||0)+Number(g.valor||0);});
+  const gastoPorCat={};S.gastos.filter(g=>g.status==='Pago').forEach(g=>{gastoPorCat[g.cat]=(gastoPorCat[g.cat]||0)+num(g.valor||0);});
   const orcPorCat={};S.acoes.forEach(a=>{orcPorCat[a.frente]=(orcPorCat[a.frente]||0)+Number(a.orc||0);});
-  document.getElementById('dash-orc').innerHTML=S.categorias.map(c=>{const r=gastoPorCat[c.nome]||0;const orc=Number(c.orc||orcPorCat[c.nome]||0);const p=orc?pct(r,orc):0;return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:700">${c.nome}</span><span style="color:var(--up-muted)">${BRL(r)} / ${BRL(orc)}</span></div><div style="height:5px;background:var(--up-border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(p,100)}%;background:var(--up-teal);border-radius:3px;transition:width .8s"></div></div></div>`;}).join('')||'<div class="empty" style="padding:12px">Sem categorias.</div>';
+  document.getElementById('dash-orc').innerHTML=S.categorias.map(c=>{const r=gastoPorCat[c.nome]||0;const orc=num(c.orc||orcPorCat[c.nome]||0);const p=orc?pct(r,orc):0;return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:700">${c.nome}</span><span style="color:var(--up-muted)">${BRL(r)} / ${BRL(orc)}</span></div><div style="height:5px;background:var(--up-border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(p,100)}%;background:var(--up-teal);border-radius:3px;transition:width .8s"></div></div></div>`;}).join('')||'<div class="empty" style="padding:12px">Sem categorias.</div>';
   // últimos contratos
   const elC=document.getElementById('dash-contratos');
   if(!S.contratos.length){elC.innerHTML=`<div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div>`;}
-  else{const rows=[...S.contratos].reverse().slice(0,5).map(c=>`<tr><td style="font-weight:700">${c.nome}</td><td style="font-size:12px">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-weight:800">${BRL(c.valorFinal||c.valor)}</td><td>${badge(c.status)}</td></tr>`).join('');elC.innerHTML=`<table><thead><tr><th>Nome</th><th>Condomínio</th><th>Setor</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;}
+  else{const rows=[...S.contratos].reverse().slice(0,20).map(c=>`<tr><td style="font-weight:700">${c.nome}</td><td style="font-size:12px">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-weight:800">${BRL(c.valorFinal||c.valor)}</td><td>${badge(c.status)}</td></tr>`).join('');elC.innerHTML=`<table><thead><tr><th>Nome</th><th>Condomínio</th><th>Setor</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;}
 }
 
 // ═══ CRONOGRAMA ═══
@@ -1457,7 +1492,7 @@ function renderCronograma(){
     const atrasada=a.fim&&a.fim<hoje3&&a.status!=='Concluído';
     const stSel=`<select class="status-sel" style="${atrasada?'background:var(--ok-amber-bg);color:var(--ok-amber);border-color:var(--ok-amber)':''}" onchange="updateStatus(${ri},this.value)">${['Planejado','Em andamento','Concluído','Aguardando'].map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}</select>`;
         // Calcula realizado desta ação (gastos com descrição que referencia a ação)
-    const realAcao=S.gastos.filter(g=>g.cat===a.frente||g.macro===a.acao).reduce((s,g)=>s+Number(g.valor||0),0);
+    const realAcao=S.gastos.filter(g=>g.cat===a.frente||g.macro===a.acao).reduce((s,g)=>s+num(g.valor||0),0);
     // Sub-linhas: despesas registradas nesta frente/ação
     const despAcao=S.gastos.filter(g=>g.macro===a.acao);
     const subRows=despAcao.map(g=>`<div class="crono-row" style="background:#f9fafb;font-size:11px;color:var(--up-muted)"><div style="padding-left:20px;grid-column:1">↳ ${g.macro||g.cat} — ${fmtDate(g.data)}</div><div>${g.resp||'—'}</div><div></div><div></div><div></div><div style="font-weight:700;color:var(--ok-red)">- ${BRL(g.valor)}</div><div></div><div></div></div>`).join('');
@@ -1491,7 +1526,7 @@ function renderOrcamento(){
   // Realizado por categoria = soma das despesas registradas
   const realPF={};
   frentes.forEach(f=>realPF[f]=0);
-  S.gastos.forEach(g=>{if(realPF[g.cat]!==undefined)realPF[g.cat]+=Number(g.valor||0);});
+  S.gastos.forEach(g=>{if(realPF[g.cat]!==undefined)realPF[g.cat]+=num(g.valor||0);});
   
   const totO=Object.values(orcPF).reduce((a,b)=>a+b,0);
   const totR=Object.values(realPF).reduce((a,b)=>a+b,0);
@@ -1511,7 +1546,7 @@ function renderOrcamento(){
     // Sub-linhas: ações planejadas + despesas por ação
     const acoesSub=acoesF.map(a=>{
       const despA=despF.filter(g=>g.macro===a.acao);
-      const realA=despA.reduce((s,g)=>s+Number(g.valor||0),0);
+      const realA=despA.reduce((s,g)=>s+num(g.valor||0),0);
       const saldoA=Number(a.orc||0)-realA;
       const atrasada=a.fim&&a.fim<new Date().toISOString().split('T')[0]&&a.status!=='Concluído';
       return`<div style="border-top:1px solid var(--up-border)">
@@ -1637,25 +1672,25 @@ function renderContratos(){
   const data=busca?S.contratos.filter(c=>(c.nome||'').toLowerCase().includes(busca)||getCondoNome(c).toLowerCase().includes(busca)):S.contratos;
   const totC=S.contratos.length,recC=totalReceita(),av=S.contratos.filter(c=>(c.pagto||'').toLowerCase().includes('vista')).length;
   document.getElementById('c-total').textContent=totC;document.getElementById('c-receita').textContent=BRL(recC);document.getElementById('c-ticket').textContent=totC?BRL(recC/totC):'—';document.getElementById('c-avista').textContent=av;
-  document.getElementById('contratos-tbody').innerHTML=data.length?data.map(c=>{const ri=S.contratos.indexOf(c);const vO=Number(c.valor||0),vF=Number(c.valorFinal||c.valor||0);const desc=vO&&vF&&vF<vO?BRL(vO-vF)+' ('+Math.round((1-vF/vO)*100)+'%)':'—';return`<tr><td style="color:var(--up-muted);font-size:11px">${ri+1}</td><td style="font-weight:700">${c.nome}</td><td>${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${c.lote||'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td><button class="icon-btn del" onclick="deletarContrato(${ri})"><span class="tip">Excluir</span>🗑</button></td></tr>`;}).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div></td></tr>`;
+  document.getElementById('contratos-tbody').innerHTML=data.length?data.map(c=>{const ri=S.contratos.indexOf(c);const vO=num(c.valor||0),vF=num(c.valorFinal||c.valor||0);const desc=vO&&vF&&vF<vO?BRL(vO-vF)+' ('+fmtPct((1-vF/vO)*100)+')':'—';return`<tr><td style="color:var(--up-muted);font-size:11px">${ri+1}</td><td style="font-weight:700">${c.nome}</td><td>${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${c.lote||'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td><button class="icon-btn del" onclick="deletarContrato(${ri})"><span class="tip">Excluir</span>🗑</button></td></tr>`;}).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div></td></tr>`;
 }
 function deletarContrato(i){if(!confirm('Remover?'))return;S.contratos.splice(i,1);saveS();renderContratos();renderDashboard();toast('Removido');}
 
 // ═══ RELATÓRIOS ═══
 const CORES_SETOR={'CTG 1':'#F47920','CTG 2':'#2BBCB8','CTG 3':'#3E4C5E','GCL':'#1C7C4A','BVT':'#7A4A9A'};
 function renderRelatorios(){
-  const rec=totalReceita(),gasto=totalGasto(),totC=S.contratos.length,m1=Number(S.cfg.meta||S.cfg.m1||10000000),o1=Number(S.cfg.o1||0);
-  document.getElementById('r1v').textContent=BRL(rec);document.getElementById('r1s').textContent=`${pct(rec,m1)}% da Meta`;document.getElementById('r1b').style.width=Math.min(pct(rec,m1),100)+'%';
-  document.getElementById('r2v').textContent=BRL(gasto);document.getElementById('r2s').textContent=`${pct(gasto,o1)}%`;document.getElementById('r2b').style.width=Math.min(pct(gasto,o1),100)+'%';
+  const rec=totalReceita(),gasto=totalGasto(),totC=S.contratos.length,m1=num(S.cfg.meta||S.cfg.m1||10000000),o1=num(S.cfg.o1||0),pRec=pct(rec,m1),pGasto=pct(gasto,o1);
+  document.getElementById('r1v').textContent=BRL(rec);document.getElementById('r1s').textContent=`${fmtPct(pRec)} da Meta`;document.getElementById('r1b').style.width=Math.min(pRec,100)+'%';
+  document.getElementById('r2v').textContent=BRL(gasto);document.getElementById('r2s').textContent=fmtPct(pGasto);document.getElementById('r2b').style.width=Math.min(pGasto,100)+'%';
   document.getElementById('r3v').textContent=gasto>0?(rec/gasto).toFixed(1)+'x':'—';
   document.getElementById('r4v').textContent=(totC&&gasto)?BRL(gasto/totC):'—';
 
   // Progresso da meta
-  const metaCampanha=Number(S.cfg.meta||S.cfg.m1||10000000), orcCampanha=Number(S.cfg.o1||0), pMeta=pct(rec,metaCampanha);
+  const metaCampanha=num(S.cfg.meta||S.cfg.m1||10000000), orcCampanha=num(S.cfg.o1||0), pMeta=pct(rec,metaCampanha);
   document.getElementById('rel-metas').innerHTML=`<div style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div><span style="font-size:13px;font-weight:800">Meta Geral</span> <span style="font-size:11px;color:var(--up-muted)">· Meta ${BRL(metaCampanha)} · Orç. MKT ${BRL(orcCampanha)}</span></div>
-        <span style="font-size:14px;font-weight:800;color:var(--up-orange)">${pMeta}%</span>
+        <span style="font-size:14px;font-weight:800;color:var(--up-orange)">${fmtPct(pMeta)}</span>
       </div>
       <div style="height:12px;background:var(--up-border);border-radius:6px;overflow:hidden">
         <div style="height:100%;width:${Math.min(pMeta,100)}%;background:var(--up-orange);border-radius:6px;transition:width .8s;display:flex;align-items:center;justify-content:flex-end;padding-right:6px">
@@ -1666,7 +1701,7 @@ function renderRelatorios(){
     </div>`;
 
   // Ranking condomínios
-  const rpC={};S.contratos.forEach(c=>{const condo=getCondoNome(c);if(condo!=='—')rpC[condo]=(rpC[condo]||0)+Number(c.valorFinal||c.valor||0);});
+  const rpC={};S.contratos.forEach(c=>{const condo=getCondoNome(c);if(condo!=='—')rpC[condo]=(rpC[condo]||0)+num(c.valorFinal||c.valor||0);});
   const sortedC=Object.entries(rpC).sort((a,b)=>b[1]-a[1]);
   // Merge com TOP20 — mostrar todos os 20 com realizado
   const allC=TOP20.map(t=>({n:t.n,vgv:t.vgv,real:rpC[t.n]||0,s:t.s})).sort((a,b)=>b.real-a.real||b.vgv-a.vgv);
@@ -1694,7 +1729,7 @@ function renderRelatorios(){
   }).join('');
 
   // Receita por setor
-  const rpS={};S.contratos.forEach(c=>{rpS[c.setor||'?']=(rpS[c.setor||'?']||0)+Number(c.valorFinal||c.valor||0);});
+  const rpS={};S.contratos.forEach(c=>{rpS[c.setor||'?']=(rpS[c.setor||'?']||0)+num(c.valorFinal||c.valor||0);});
   const totRS=Object.values(rpS).reduce((a,b)=>a+b,0)||1;
   document.getElementById('rel-setor').innerHTML=Object.keys(CORES_SETOR).map(s=>{
     const v=rpS[s]||0;const cor=CORES_SETOR[s];const p2=pct(v,totRS);
@@ -1708,10 +1743,10 @@ function renderRelatorios(){
   const rpP={};S.contratos.forEach(c=>{rpP[c.pagto]=(rpP[c.pagto]||0)+1;});
   const totP=S.contratos.length||1;
   const pagCores=['#F47920','#2BBCB8','#3E4C5E','#1C7C4A','#7A4A9A','#1055A0'];
-  document.getElementById('rel-pagto').innerHTML=Object.entries(rpP).length?Object.entries(rpP).sort((a,b)=>b[1]-a[1]).map(([p,q],i)=>`<div class="chart-bar-item"><div class="chart-bar-label"><span>${p}</span><span style="font-weight:800">${q} contrato${q>1?'s':''} (${pct(q,totP)}%)</span></div><div class="chart-bar-bg"><div class="chart-bar-fg" style="width:${pct(q,totP)}%;background:${pagCores[i%pagCores.length]}"></div></div></div>`).join(''):`<div class="empty" style="padding:14px">Sem dados.</div>`;
+  document.getElementById('rel-pagto').innerHTML=Object.entries(rpP).length?Object.entries(rpP).sort((a,b)=>b[1]-a[1]).map(([p,q],i)=>`<div class="chart-bar-item"><div class="chart-bar-label"><span>${p}</span><span style="font-weight:800">${q} contrato${q>1?'s':''} (${fmtPct(pct(q,totP))})</span></div><div class="chart-bar-bg"><div class="chart-bar-fg" style="width:${pct(q,totP)}%;background:${pagCores[i%pagCores.length]}"></div></div></div>`).join(''):`<div class="empty" style="padding:14px">Sem dados.</div>`;
 
   // Evolução por mês
-  const porMes={};S.contratos.forEach(c=>{if(c.data){const m=c.data.substring(0,7);porMes[m]=(porMes[m]||0)+Number(c.valorFinal||c.valor||0);}});
+  const porMes={};S.contratos.forEach(c=>{if(c.data){const m=c.data.substring(0,7);porMes[m]=(porMes[m]||0)+num(c.valorFinal||c.valor||0);}});
   const meses=Object.keys(porMes).sort();const maxM=Math.max(...Object.values(porMes),1);
   document.getElementById('rel-evolucao').innerHTML=meses.length?meses.map(m=>{const v=porMes[m];const dt=new Date(m+'-01');const lbl=dt.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});return`<div class="chart-bar-item"><div class="chart-bar-label"><span>${lbl}</span><span style="font-weight:800;color:var(--up-orange)">${BRL(v)}</span></div><div class="chart-bar-bg"><div class="chart-bar-fg" style="width:${pct(v,maxM)}%;background:var(--up-orange)"></div></div></div>`;}).join(''):`<div class="empty" style="padding:14px">Sem dados de contratos com data.</div>`;
 }
@@ -1798,8 +1833,8 @@ function salvarMidia(){
 function salvarConfig(){
   S.cfg={
     ...S.cfg,
-    meta:Number(document.getElementById('cfg-meta').value||10000000),
-    o1:Number(document.getElementById('cfg-o1').value||0),
+    meta:num(document.getElementById('cfg-meta').value||10000000),
+    o1:num(document.getElementById('cfg-o1').value||0),
     o2:0,
     o3:0,
     nome:document.getElementById('cfg-nome').value,
