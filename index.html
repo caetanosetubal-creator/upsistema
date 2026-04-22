@@ -492,7 +492,7 @@ tbody td{padding:8px 12px;vertical-align:middle}
 <div class="page on" id="page-dashboard">
   <div class="sh"><div class="sh-l"><div class="ttl">Dashboard da Campanha</div><div class="sub">Urbanizadora Paranoazinho · Campanha Estoque UP 2026</div></div></div>
   <div class="metas" style="grid-template-columns:1fr">
-    <div class="mc ativa"><div class="pill">ATIVA</div><div class="fase">META GERAL · Campanha 2026</div><div class="receita">R$ 10.000.000</div><div class="orc-txt">Orçamento MKT: R$ 90.000</div><div class="mbar"><div class="mfill" id="mf1" style="width:0%"></div></div><div class="mpct" id="mp1">0% atingido</div></div>
+    <div class="mc ativa"><div class="pill">ATIVA</div><div class="fase">META GERAL · Campanha 2026</div><div class="receita" id="meta-geral-v">R$ 10.000.000</div><div class="orc-txt" id="meta-orc-v">Orçamento MKT: R$ 90.000</div><div class="mbar"><div class="mfill" id="mf1" style="width:0%"></div></div><div class="mpct" id="mp1">0% atingido</div></div>
   </div>
   <div class="kpi-row">
     <div class="kpi kp-g"><div class="lbl">Receita Realizada</div><div class="val" id="k1v">R$ 0</div><div class="sub" id="k1s">0 contratos</div><div class="bar"><div class="fill" id="k1b" style="width:0%"></div></div></div>
@@ -1016,6 +1016,7 @@ function loadS(){
     if(v)try{S[k]=JSON.parse(v);}catch(e){}
   });
   normalizeCfg();
+  migrateLegacyCfg();
   normalizeContratos();
   syncConfigInputs();
   // Preenche URL salva no campo de config
@@ -1077,6 +1078,7 @@ async function pullFromSheets(){
       if(Array.isArray(d.midia))S.midia=d.midia;
       if(d.cfg)S.cfg=Array.isArray(d.cfg)?d.cfg:{...S.cfg,...d.cfg};
       normalizeCfg();
+      migrateLegacyCfg();
       normalizeContratos();
       syncConfigInputs();
       SHEETS_KEYS.forEach(k=>localStorage.setItem('up5_'+k,JSON.stringify(S[k])));
@@ -1351,6 +1353,12 @@ const fmtDate=d=>{
   const dt=new Date(s);
   return isNaN(dt.getTime()) ? s : dt.toLocaleDateString('pt-BR');
 };
+const cleanSpaces=s=>String(s||'').replace(/\s+/g,' ').trim();
+const formatCondoName=v=>{
+  const s=cleanSpaces(v);
+  if(!s||s==='—')return '—';
+  return s.toLocaleUpperCase('pt-BR');
+};
 const getCondoFallback=c=>{
   const cfgFallback=pickField(S.cfg||{},[
     'condoPadrao',
@@ -1359,23 +1367,24 @@ const getCondoFallback=c=>{
     'nomeCondominioPadrao',
     'nomeCondomínioPadrao'
   ])||'';
-  return cfgFallback || '';
+  return formatCondoName(cfgFallback||'');
 };
-
-const getCondoNome=c=>pickField(c,[
-  'cond',
-  'Cond',
-  'COND',
-  'condo',
-  'condominio',
-  'condomínio',
-  'Condominio',
-  'Condomínio',
-  'nomeCondominio',
-  'nomeCondomínio',
-  'empreendimento',
-  'Empreendimento'
-])||getCondoFallback(c)||'—';
+const getCondoNome=c=>formatCondoName(
+  pickField(c,[
+    'cond',
+    'Cond',
+    'COND',
+    'condo',
+    'condominio',
+    'condomínio',
+    'Condominio',
+    'Condomínio',
+    'nomeCondominio',
+    'nomeCondomínio',
+    'empreendimento',
+    'Empreendimento'
+  ])||getCondoFallback(c)||'—'
+);
 const getPagamento=c=>pickField(c,['pagamento','Pagamento','pagto','Pagto','formaPagamento','forma_pagamento','FORMA DE PAGAMENTO'])||'';
 const parseSheetDate=v=>{
   if(v===null||v===undefined||v==='')return '';
@@ -1414,7 +1423,17 @@ const normalizeCfg=()=>{
   if(!S.cfg||typeof S.cfg!=='object')S.cfg={};
   const meta=num(S.cfg.meta||S.cfg.m1||10000000);
   const orc=num(S.cfg.o1||S.cfg.orcamento||90000);
-  S.cfg={...S.cfg,meta:meta,o1:orc,nome:S.cfg.nome||'A Um Passo da Escritura',condoPadrao:S.cfg.condoPadrao||S.cfg.condominioPadrao||''};
+  S.cfg={...S.cfg,meta:meta,o1:orc,nome:S.cfg.nome||'A Um Passo da Escritura',condoPadrao:formatCondoName(S.cfg.condoPadrao||S.cfg.condominioPadrao||'').replace(/^—$/,'')};
+};
+const migrateLegacyCfg=()=>{
+  const nome=(S.cfg?.nome||'').toString().toLowerCase();
+  const metaAtual=num(S.cfg?.meta||S.cfg?.m1||0);
+  if(nome.includes('a um passo da escritura') && (!metaAtual || metaAtual===3000000)){
+    S.cfg.meta=10000000;
+  }
+  if(formatCondoName(S.cfg?.condoPadrao||'')==='JARDIM EUROPA II' && !pickField(S.cfg||{},['cond','condominio','condomínio'])){
+    S.cfg.condoPadrao='';
+  }
 };
 const normalizeContratos=()=>{
   if(!Array.isArray(S.contratos))S.contratos=[];
@@ -1453,6 +1472,8 @@ function renderPage(p){({dashboard:renderDashboard,cronograma:renderCronograma,o
 function renderDashboard(){
   const rec=totalReceita(),gasto=totalGasto(),m1=num(S.cfg.meta||S.cfg.m1||10000000),o1=num(S.cfg.o1||0),p1=pct(rec,m1),p1Txt=fmtPct(p1),p2=pct(gasto,o1),p2Txt=fmtPct(p2);
   document.getElementById('sb-receita').textContent=BRL(rec);document.getElementById('sb-pct').textContent=`${p1Txt} da meta`;
+  const metaGeralEl=document.getElementById('meta-geral-v');if(metaGeralEl)metaGeralEl.textContent=BRL(m1);
+  const metaOrcEl=document.getElementById('meta-orc-v');if(metaOrcEl)metaOrcEl.textContent=`Orçamento MKT: ${BRL(o1)}`;
   document.getElementById('mf1').style.width=Math.min(p1,100)+'%';document.getElementById('mp1').textContent=`${p1Txt} atingido (${BRL(rec)})`;
   document.getElementById('k1v').textContent=BRL(rec);document.getElementById('k1s').textContent=`${S.contratos.length} contrato(s) · ${p1Txt} da meta`;document.getElementById('k1b').style.width=Math.min(p1,100)+'%';
   document.getElementById('k2v').textContent=BRL(gasto);document.getElementById('k2s').textContent=`${p2Txt} do orçamento`;document.getElementById('k2b').style.width=Math.min(p2,100)+'%';
@@ -1494,7 +1515,7 @@ function renderDashboard(){
   // últimos contratos
   const elC=document.getElementById('dash-contratos');
   if(!S.contratos.length){elC.innerHTML=`<div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div>`;}
-  else{const rows=[...S.contratos].reverse().slice(0,20).map(c=>`<tr><td style="font-weight:700">${c.nome}</td><td style="font-size:12px">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-weight:800">${BRL(c.valorFinal||c.valor)}</td><td>${badge(c.status)}</td></tr>`).join('');elC.innerHTML=`<table><thead><tr><th>Nome</th><th>Condomínio</th><th>Setor</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;}
+  else{const rows=[...S.contratos].reverse().slice(0,20).map(c=>`<tr><td style="font-weight:700">${c.nome}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-weight:800">${BRL(c.valorFinal||c.valor)}</td><td>${badge(c.status)}</td></tr>`).join('');elC.innerHTML=`<table><thead><tr><th>Nome</th><th>Condomínio</th><th>Setor</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;}
 }
 
 // ═══ CRONOGRAMA ═══
@@ -1690,7 +1711,7 @@ function renderContratos(){
   const data=busca?S.contratos.filter(c=>(c.nome||'').toLowerCase().includes(busca)||getCondoNome(c).toLowerCase().includes(busca)):S.contratos;
   const totC=S.contratos.length,recC=totalReceita(),av=S.contratos.filter(c=>(c.pagto||'').toLowerCase().includes('vista')).length;
   document.getElementById('c-total').textContent=totC;document.getElementById('c-receita').textContent=BRL(recC);document.getElementById('c-ticket').textContent=totC?BRL(recC/totC):'—';document.getElementById('c-avista').textContent=av;
-  document.getElementById('contratos-tbody').innerHTML=data.length?data.map(c=>{const ri=S.contratos.indexOf(c);const vO=num(c.valor||0),vF=num(c.valorFinal||c.valor||0);const desc=vO&&vF&&vF<vO?BRL(vO-vF)+' ('+fmtPct((1-vF/vO)*100)+')':'—';return`<tr><td style="color:var(--up-muted);font-size:11px">${ri+1}</td><td style="font-weight:700">${c.nome}</td><td>${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${c.lote||'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td><button class="icon-btn del" onclick="deletarContrato(${ri})"><span class="tip">Excluir</span>🗑</button></td></tr>`;}).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div></td></tr>`;
+  document.getElementById('contratos-tbody').innerHTML=data.length?data.map(c=>{const ri=S.contratos.indexOf(c);const vO=num(c.valor||0),vF=num(c.valorFinal||c.valor||0);const desc=vO&&vF&&vF<vO?BRL(vO-vF)+' ('+fmtPct((1-vF/vO)*100)+')':'—';return`<tr><td style="color:var(--up-muted);font-size:11px">${ri+1}</td><td style="font-weight:700">${c.nome}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${c.lote||'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td><button class="icon-btn del" onclick="deletarContrato(${ri})"><span class="tip">Excluir</span>🗑</button></td></tr>`;}).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div></td></tr>`;
 }
 function deletarContrato(i){if(!confirm('Remover?'))return;S.contratos.splice(i,1);saveS();renderContratos();renderDashboard();toast('Removido');}
 
@@ -1856,7 +1877,7 @@ function salvarConfig(){
     o2:0,
     o3:0,
     nome:document.getElementById('cfg-nome').value,
-    condoPadrao:S.cfg?.condoPadrao||'JARDIM EUROPA II'
+    condoPadrao:formatCondoName(S.cfg?.condoPadrao||'').replace(/^—$/,'')
   };
   saveS();renderDashboard();renderRelatorios();toast('Salvo!','ok');
 }
