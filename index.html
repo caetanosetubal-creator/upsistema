@@ -966,7 +966,7 @@ tbody td{padding:8px 12px;vertical-align:middle}
 
 <script>
 // ═══ STATE ═══
-const S={contratos:[],acoes:[],categorias:[],micros:[],gastos:[],midia:[],cfg:{meta:10000000,o1:90000,nome:'A Um Passo da Escritura',condoPadrao:'JARDIM EUROPA II'}};
+const S={contratos:[],acoes:[],categorias:[],micros:[],gastos:[],midia:[],cfg:{meta:10000000,o1:90000,nome:'A Um Passo da Escritura',condoPadrao:''}};
 // ══════════════════════════════════════════════════════════════
 // GOOGLE SHEETS — OPÇÃO 2: localStorage + polling automático
 // ══════════════════════════════════════════════════════════════
@@ -1352,12 +1352,30 @@ const fmtDate=d=>{
   return isNaN(dt.getTime()) ? s : dt.toLocaleDateString('pt-BR');
 };
 const getCondoFallback=c=>{
-  const cfgFallback=pickField(S.cfg||{},['condoPadrao','condominioPadrao','condomínioPadrao','nomeCondominioPadrao','nomeCondomínioPadrao'])||'';
-  if(cfgFallback)return cfgFallback;
-  if((c?.setor||'').trim()==='GCL')return 'JARDIM EUROPA II';
-  return '';
+  const cfgFallback=pickField(S.cfg||{},[
+    'condoPadrao',
+    'condominioPadrao',
+    'condomínioPadrao',
+    'nomeCondominioPadrao',
+    'nomeCondomínioPadrao'
+  ])||'';
+  return cfgFallback || '';
 };
-const getCondoNome=c=>pickField(c,['condo','condominio','condomínio','Condominio','Condomínio','nomeCondominio','nomeCondomínio','empreendimento','Empreendimento'])||getCondoFallback(c)||'—';
+
+const getCondoNome=c=>pickField(c,[
+  'cond',
+  'Cond',
+  'COND',
+  'condo',
+  'condominio',
+  'condomínio',
+  'Condominio',
+  'Condomínio',
+  'nomeCondominio',
+  'nomeCondomínio',
+  'empreendimento',
+  'Empreendimento'
+])||getCondoFallback(c)||'—';
 const getPagamento=c=>pickField(c,['pagamento','Pagamento','pagto','Pagto','formaPagamento','forma_pagamento','FORMA DE PAGAMENTO'])||'';
 const parseSheetDate=v=>{
   if(v===null||v===undefined||v==='')return '';
@@ -1396,7 +1414,7 @@ const normalizeCfg=()=>{
   if(!S.cfg||typeof S.cfg!=='object')S.cfg={};
   const meta=num(S.cfg.meta||S.cfg.m1||10000000);
   const orc=num(S.cfg.o1||S.cfg.orcamento||90000);
-  S.cfg={...S.cfg,meta:meta,o1:orc,nome:S.cfg.nome||'A Um Passo da Escritura',condoPadrao:S.cfg.condoPadrao||S.cfg.condominioPadrao||'JARDIM EUROPA II'};
+  S.cfg={...S.cfg,meta:meta,o1:orc,nome:S.cfg.nome||'A Um Passo da Escritura',condoPadrao:S.cfg.condoPadrao||S.cfg.condominioPadrao||''};
 };
 const normalizeContratos=()=>{
   if(!Array.isArray(S.contratos))S.contratos=[];
