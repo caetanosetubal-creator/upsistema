@@ -999,14 +999,12 @@ function salvarScriptUrl(){
 async function gsApi(payload){
   if(!SCRIPT_URL)throw new Error('URL não configurada');
   const res=await fetch(SCRIPT_URL,{
-    method:'POST',
-    headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify(payload),
+    method: 'GET',
     redirect:'follow'
   });
-  const data=await res.json();
-  if(!data.ok)throw new Error(data.error||'Erro na API');
-  return data;
+const data = await res.json();
+if (!data.success) throw new Error(data.error || 'Erro na API');
+return data.data;
 }
 
 // ── Carregar: localStorage primeiro, depois Sheets ─────────────
