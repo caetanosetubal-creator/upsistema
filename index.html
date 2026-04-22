@@ -996,15 +996,15 @@ function salvarScriptUrl(){
 }
 
 // ── Chamada à API do Apps Script ──────────────────────────────
-async function gsApi(payload){
+async function gsApi(payload={}){
   if(!SCRIPT_URL)throw new Error('URL não configurada');
-  const res=await fetch(SCRIPT_URL,{
-    method: 'GET',
-    redirect:'follow'
-  });
-const data = await res.json();
-if (!data.success) throw new Error(data.error || 'Erro na API');
-return data.data;
+  const url=new URL(SCRIPT_URL);
+  if(payload&&payload.action)url.searchParams.set('action',payload.action);
+  const res=await fetch(url.toString(),{method:'GET',redirect:'follow',cache:'no-store'});
+  if(!res.ok)throw new Error('Erro HTTP '+res.status);
+  const raw=await res.json();
+  if(raw&&raw.success===false)throw new Error(raw.error||'Erro na API');
+  return raw&&raw.data!==undefined ? raw.data : raw;
 }
 
 // ── Carregar: localStorage primeiro, depois Sheets ─────────────
@@ -1030,46 +1030,32 @@ function saveS(){
 
 // ── Push: envia todos os dados ao Sheets ──────────────────────
 async function pushToSheets(){
-  try{
-    const payload={action:'saveAll',data:{
-      contratos:S.contratos,
-      acoes:S.acoes,
-      categorias:S.categorias,
-      micros:S.micros,
-      gastos:S.gastos,
-      midia:S.midia,
-      cfg:S.cfg
-    }};
-    await gsApi(payload);
-    setConn(true);
-    const el=document.getElementById('upd-txt');
-    if(el)el.textContent='Salvo + Sheets '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  }catch(e){
-    setConn(false,'● Salvo local — Sheets offline');
-    console.warn('Sheets push:',e.message);
-  }
+  // Apps Script atual está configurado apenas para leitura (doGet).
+  // Mantemos o salvamento local sem marcar erro falso de conexão.
+  const el=document.getElementById('upd-txt');
+  if(el)el.textContent='Salvo local '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  console.log('Sheets push ignorado: Apps Script em modo leitura.');
+  return true;
 }
 
 // ── Pull: puxa dados do Sheets → sobrescreve local ────────────
 async function pullFromSheets(){
-  if(!SCRIPT_URL){setConn(false,'● Sem URL configurada');return;}
+  if(!SCRIPT_URL){setConn(false,'● Sem URL configurada');return false;}
   try{
-    const r=await gsApi({action:'getAll'});
-    if(r.data){
-      const d=r.data;
-      if(Array.isArray(d.contratos))S.contratos=d.contratos;
-      if(Array.isArray(d.acoes))S.acoes=d.acoes;
-      if(Array.isArray(d.categorias))S.categorias=d.categorias;
-      if(Array.isArray(d.micros))S.micros=d.micros;
-      if(Array.isArray(d.gastos))S.gastos=d.gastos;
-      if(Array.isArray(d.midia))S.midia=d.midia;
-      if(d.cfg)S.cfg=Array.isArray(d.cfg)?d.cfg:{...S.cfg,...d.cfg};
-      normalizeCfg();
-      normalizeContratos();
-      SHEETS_KEYS.forEach(k=>localStorage.setItem('up5_'+k,JSON.stringify(S[k])));
-    }
+    const d=await gsApi({action:'getAll'});
+    if(Array.isArray(d?.contratos))S.contratos=d.contratos;
+    if(Array.isArray(d?.acoes))S.acoes=d.acoes;
+    if(Array.isArray(d?.categorias))S.categorias=d.categorias;
+    if(Array.isArray(d?.micros))S.micros=d.micros;
+    if(Array.isArray(d?.gastos))S.gastos=d.gastos;
+    if(Array.isArray(d?.midia))S.midia=d.midia;
+    if(d?.cfg)S.cfg=Array.isArray(d.cfg)?d.cfg:{...S.cfg,...d.cfg};
+    normalizeCfg();
+    normalizeContratos();
+    SHEETS_KEYS.forEach(k=>localStorage.setItem('up5_'+k,JSON.stringify(S[k])));
     setConn(true);
-    document.getElementById('upd-txt').textContent='Sheets: '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const upd=document.getElementById('upd-txt');
+    if(upd)upd.textContent='Sheets: '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     return true;
   }catch(e){
     setConn(false,'● Offline — cache local');
@@ -1111,15 +1097,13 @@ function iniciarPolling(){
 async function inicializarSheets(){
   if(!SCRIPT_URL){toast('Salve a URL do Apps Script primeiro','err');return;}
   const msg=document.getElementById('sheets-msg');
-  if(msg)msg.textContent='Inicializando planilha...';
+  if(msg)msg.textContent='Validando conexão com a planilha...';
   try{
-    const r=await gsApi({action:'init'});
-    setConn(true);
+    const ok=await pullFromSheets();
+    if(!ok)throw new Error('Não foi possível ler a planilha');
     iniciarPolling();
-    // Push dos dados atuais para a planilha
-    await pushToSheets();
-    toast(r.message||'Planilha inicializada! Dados enviados ✓','ok');
-    if(msg)msg.textContent='Planilha pronta. Polling ativo a cada 5 min.';
+    toast('Planilha conectada! Leitura ativa ✓','ok');
+    if(msg)msg.textContent='Planilha conectada. Polling ativo a cada 5 min.';
   }catch(e){
     toast('Erro: '+e.message,'err');
     if(msg)msg.textContent='Erro: '+e.message;
@@ -1359,13 +1343,33 @@ const normalizeCfg=()=>{
   const orc=Number(S.cfg.o1||S.cfg.orcamento||90000);
   S.cfg={...S.cfg,meta:meta,o1:orc,nome:S.cfg.nome||'A Um Passo da Escritura',condoPadrao:S.cfg.condoPadrao||S.cfg.condominioPadrao||'JARDIM EUROPA II'};
 };
+const toNum=v=>{
+  if(v===null||v===undefined||v==='')return 0;
+  if(typeof v==='number')return isFinite(v)?v:0;
+  const s=String(v).trim().replace(/\s+/g,'');
+  if(!s)return 0;
+  const norm=s.includes(',') ? s.replace(/\./g,'').replace(',','.') : s;
+  const n=Number(norm.replace(/[^\d.-]/g,''));
+  return isFinite(n)?n:0;
+};
 const normalizeContratos=()=>{
   if(!Array.isArray(S.contratos))S.contratos=[];
   S.contratos=S.contratos.map(c=>{
     const condo=getCondoNome(c);
     const data=parseSheetDate(pickField(c,['data','Data','dt','date']));
     const pagamento=getPagamento(c);
-    return {...c,condo:condo&&condo!=='—'?condo:'',condominio:condo&&condo!=='—'?condo:'',pagto:pagamento,pagamento:pagamento,data:data||''};
+    const valorOriginal=toNum(c.valor);
+    const valorFinal=toNum(c.valorFinal||c.valor);
+    return {
+      ...c,
+      condo:condo&&condo!=='—'?condo:'',
+      condominio:condo&&condo!=='—'?condo:'',
+      pagto:pagamento,
+      pagamento:pagamento,
+      data:data||'',
+      valor:valorOriginal,
+      valorFinal:valorFinal
+    };
   });
 };
 const STATUS_B={'Concluído':'b-g','Em andamento':'b-b','Planejado':'b-z','Aguardando':'b-a','Pago':'b-g','Pendente':'b-a','Aprovado':'b-b','Em negociação':'b-a','Acordo assinado':'b-b','Escritura emitida':'b-t','Pausado':'b-z'};
