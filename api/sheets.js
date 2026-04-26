@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  const scriptUrl = process.env.APPS_SCRIPT_URL;
+ const scriptUrl = process.env.APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzO5DKp1jAB0_hQSHYy0m6ISr0bF8Cy0RTNTWUKC20lnsbUtF8fa6hKsZDTDtRjiX_K/exec';
 
   if (!scriptUrl) {
     return res.status(500).json({
