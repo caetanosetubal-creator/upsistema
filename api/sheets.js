@@ -24,7 +24,6 @@ export default async function handler(req, res) {
 
     const action = payload.action || '';
 
-    // Para sincronização/leitura, usa GET no Apps Script
     if (action === 'getAll') {
       const upstream = await fetch(scriptUrl, {
         method: 'GET',
@@ -32,14 +31,15 @@ export default async function handler(req, res) {
       });
 
       const text = await upstream.text();
-      const contentType =
-        upstream.headers.get('content-type') || 'application/json; charset=utf-8';
+      const parsed = JSON.parse(text);
 
-      res.setHeader('Content-Type', contentType);
-      return res.status(upstream.status || 200).send(text);
+      return res.status(200).json({
+        ok: !!parsed.success,
+        data: parsed.data || {},
+        raw: parsed
+      });
     }
 
-    // Para outras ações, mantém POST
     const upstream = await fetch(scriptUrl, {
       method: 'POST',
       headers: {
@@ -50,11 +50,19 @@ export default async function handler(req, res) {
     });
 
     const text = await upstream.text();
-    const contentType =
-      upstream.headers.get('content-type') || 'application/json; charset=utf-8';
 
-    res.setHeader('Content-Type', contentType);
-    return res.status(upstream.status || 200).send(text);
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = { success: false, error: text };
+    }
+
+    return res.status(200).json({
+      ok: !!parsed.success || !!parsed.ok,
+      data: parsed.data || {},
+      raw: parsed
+    });
   } catch (error) {
     return res.status(500).json({
       ok: false,
