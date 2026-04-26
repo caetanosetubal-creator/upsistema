@@ -577,7 +577,7 @@ tbody td{padding:8px 12px;vertical-align:middle}
   <div class="sh">
     <div class="sh-l"><div class="ttl">Contratos / Escrituras</div><div class="sub">Campos obrigatórios marcados com ★</div></div>
     <div class="sh-r">
-      <input class="fi" style="width:210px;padding:6px 10px" placeholder="Buscar nome ou condomínio..." id="busca-c" oninput="renderContratos()">
+      <input class="fi" style="width:210px;padding:6px 10px" placeholder="Buscar lote, condomínio ou setor..." id="busca-c" oninput="renderContratos()">
       <button class="btn btn-primary" onclick="show_ov('ov-contrato')">+ Novo Contrato</button>
     </div>
   </div>
@@ -588,7 +588,7 @@ tbody td{padding:8px 12px;vertical-align:middle}
     <div class="kpi"><div class="lbl">À Vista</div><div class="val" id="c-avista">0</div><div class="sub">Contratos à vista</div></div>
   </div>
   <div class="card"><div class="tw"><table>
-    <thead><tr><th>#</th><th>Nome ★</th><th>Condomínio ★</th><th>Setor</th><th>Lote ★</th><th>Valor Original</th><th>Desconto</th><th>Valor Final ★</th><th>Pagamento ★</th><th>Status</th><th>Data</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Lote ★</th><th>Condomínio ★</th><th>Setor</th><th>Área</th><th>Valor Original</th><th>Desconto</th><th>Valor Final ★</th><th>Pagamento ★</th><th>Status</th><th>Data</th><th></th></tr></thead>
     <tbody id="contratos-tbody"></tbody>
   </table></div></div>
 </div>
@@ -744,10 +744,7 @@ tbody td{padding:8px 12px;vertical-align:middle}
 <div class="modal">
   <div class="mh"><div class="mh-ttl">+ Novo Contrato / Escritura</div><button class="mh-x" onclick="hide_ov('ov-contrato')">×</button></div>
   <div class="mb">
-    <div class="fsec">Dados do Proprietário</div>
-    <div class="fr c2">
-    </div>
-    <div class="fsec">Localização do Imóvel</div>
+    <div class="fsec">Dados do Imóvel</div>
     <div class="fr c3">
       <div class="fg">
         <div class="fl">Condomínio <span class="req">★</span></div>
@@ -805,8 +802,8 @@ tbody td{padding:8px 12px;vertical-align:middle}
       <div class="fg"><div class="fl">Área do Lote (m²)</div><input class="fi" type="number" id="cc-area" placeholder="350" oninput="calcContrato()"></div>
       <div class="fg">
         <div class="fl">Preço/m² (R$)</div>
-        <input class="fi" type="number" id="cc-pm2" placeholder="220,50" oninput="calcContrato()">
-        <div class="fi-info">Pré-definido por setor (editável)</div>
+        <input class="fi" type="number" id="cc-pm2" placeholder="244,89" oninput="calcContrato()">
+        <div class="fi-info">Pré-definido por condomínio (editável)</div>
       </div>
       <div class="fg"><div class="fl">Valor Original (R$) <span class="req">★</span></div><input class="fi" type="number" id="cc-valor" placeholder="0" oninput="calcContrato()"></div>
     </div>
@@ -1211,7 +1208,7 @@ function autoSetor(){
   const condo=document.getElementById('cc-condo').value;
   const setor=CONDO_SETOR[condo]||'';
   document.getElementById('cc-setor').value=setor;
-  const pm2=SETOR_PM2[setor]||0;
+  const pm2=num(S_PM2[condo]||SETOR_PM2[setor]||0);
   if(pm2) document.getElementById('cc-pm2').value=pm2;
   calcContrato();
 }
@@ -1439,7 +1436,22 @@ const normalizeContratos=()=>{
     const condo=getCondoNome(c);
     const data=parseSheetDate(pickField(c,['data','Data','dt','date']));
     const pagamento=getPagamento(c);
-    return {...c,condo:condo&&condo!=='—'?condo:'',condominio:condo&&condo!=='—'?condo:'',pagto:pagamento,pagamento:pagamento,data:data||'',valor:num(c.valor),valorFinal:num(c.valorFinal||c.valor),area:num(c.area),pm2:num(c.pm2)};
+    return {
+      condo:condo&&condo!=='—'?condo:'',
+      condominio:condo&&condo!=='—'?condo:'',
+      setor:pickField(c,['setor','Setor','SETOR'])||CONDO_SETOR[condo]||'',
+      lote:pickField(c,['lote','Lote','LOTE','quadraLote','quadra lote','numeroLote','nrlote']),
+      area:num(pickField(c,['area','Área','AREA','metragem','areaLote'])),
+      pm2:num(pickField(c,['pm2','Pm2','PM2','precoM2','preçoM2','preco m2','preço m²'])) || num(S_PM2[condo]||0),
+      valor:num(c.valor),
+      valorFinal:num(c.valorFinal||c.valor),
+      pagto:pagamento,
+      pagamento:pagamento,
+      tipo:pickField(c,['tipo','Tipo'])||'Contrato de Escritura',
+      status:pickField(c,['status','Status'])||'Em negociação',
+      data:data||'',
+      obs:pickField(c,['obs','Observações','Observacao','Observação'])
+    };
   });
 };
 const STATUS_B={'Concluído':'b-g','Em andamento':'b-b','Planejado':'b-z','Aguardando':'b-a','Pago':'b-g','Pendente':'b-a','Aprovado':'b-b','Em negociação':'b-a','Acordo assinado':'b-b','Escritura emitida':'b-t','Pausado':'b-z'};
@@ -1513,7 +1525,10 @@ function renderDashboard(){
   // últimos contratos
   const elC=document.getElementById('dash-contratos');
   if(!S.contratos.length){elC.innerHTML=`<div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div>`;}
-  else{const rows=[...S.contratos].reverse().slice(0,20).map(c=>`<tr><td style="font-weight:700">${c.nome}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-weight:800">${BRL(c.valorFinal||c.valor)}</td><td>${badge(c.status)}</td></tr>`).join('');elC.innerHTML=`<table><thead><tr><th>Nome</th><th>Condomínio</th><th>Setor</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;}
+  else{
+    const rows=[...S.contratos].reverse().slice(0,20).map(c=>`<tr><td style="font-weight:700">${c.lote||'—'}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-weight:800">${BRL(c.valorFinal||c.valor)}</td><td>${badge(c.status)}</td></tr>`).join('');
+    elC.innerHTML=`<table><thead><tr><th>Lote</th><th>Condomínio</th><th>Setor</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
 }
 
 // ═══ CRONOGRAMA ═══
@@ -1705,11 +1720,18 @@ function deletarMidia(i){
 
 // ═══ CONTRATOS ═══
 function renderContratos(){
-  const busca=(document.getElementById('busca-c').value||'').toLowerCase();
-  const data=busca?S.contratos.filter(c=>(c.nome||'').toLowerCase().includes(busca)||getCondoNome(c).toLowerCase().includes(busca)):S.contratos;
+  const busca=(document.getElementById('busca-c').value||'').toLowerCase().trim();
+  const data=busca?S.contratos.filter(c=>
+    (c.lote||'').toLowerCase().includes(busca)||
+    (c.setor||'').toLowerCase().includes(busca)||
+    getCondoNome(c).toLowerCase().includes(busca)
+  ):S.contratos;
   const totC=S.contratos.length,recC=totalReceita(),av=S.contratos.filter(c=>(c.pagto||'').toLowerCase().includes('vista')).length;
   document.getElementById('c-total').textContent=totC;document.getElementById('c-receita').textContent=BRL(recC);document.getElementById('c-ticket').textContent=totC?BRL(recC/totC):'—';document.getElementById('c-avista').textContent=av;
-  document.getElementById('contratos-tbody').innerHTML=data.length?data.map(c=>{const ri=S.contratos.indexOf(c);const vO=num(c.valor||0),vF=num(c.valorFinal||c.valor||0);const desc=vO&&vF&&vF<vO?BRL(vO-vF)+' ('+fmtPct((1-vF/vO)*100)+')':'—';return`<tr><td style="color:var(--up-muted);font-size:11px">${ri+1}</td><td style="font-weight:700">${c.nome}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${c.lote||'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td><button class="icon-btn del" onclick="deletarContrato(${ri})"><span class="tip">Excluir</span>🗑</button></td></tr>`;}).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div></td></tr>`;
+  document.getElementById('contratos-tbody').innerHTML=data.length?data.map(c=>{
+    const ri=S.contratos.indexOf(c);const vO=num(c.valor||0),vF=num(c.valorFinal||c.valor||0);const desc=vO&&vF&&vF<vO?BRL(vO-vF)+' ('+fmtPct((1-vF/vO)*100)+')':'—';
+    return`<tr><td style="color:var(--up-muted);font-size:11px">${ri+1}</td><td style="font-weight:700">${c.lote||'—'}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${num(c.area)?num(c.area).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' m²':'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td><button class="icon-btn del" onclick="deletarContrato(${ri})"><span class="tip">Excluir</span>🗑</button></td></tr>`;
+  }).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div></td></tr>`;
 }
 function deletarContrato(i){if(!confirm('Remover?'))return;S.contratos.splice(i,1);saveS();renderContratos();renderDashboard();toast('Removido');}
 
@@ -1783,28 +1805,53 @@ function renderRelatorios(){
   document.getElementById('rel-pagto').innerHTML=Object.entries(rpP).length?Object.entries(rpP).sort((a,b)=>b[1]-a[1]).map(([p,q],i)=>`<div class="chart-bar-item"><div class="chart-bar-label"><span>${p}</span><span style="font-weight:800">${q} contrato${q>1?'s':''} (${fmtPct(pct(q,totP))})</span></div><div class="chart-bar-bg"><div class="chart-bar-fg" style="width:${pct(q,totP)}%;background:${pagCores[i%pagCores.length]}"></div></div></div>`).join(''):`<div class="empty" style="padding:14px">Sem dados.</div>`;
 
   // Evolução por mês
-  const porMes={};S.contratos.forEach(c=>{if(c.data){const m=c.data.substring(0,7);porMes[m]=(porMes[m]||0)+num(c.valorFinal||c.valor||0);}});
-  const meses=Object.keys(porMes).sort();const maxM=Math.max(...Object.values(porMes),1);
-  document.getElementById('rel-evolucao').innerHTML=meses.length?meses.map(m=>{const v=porMes[m];const dt=new Date(m+'-01');const lbl=dt.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});return`<div class="chart-bar-item"><div class="chart-bar-label"><span>${lbl}</span><span style="font-weight:800;color:var(--up-orange)">${BRL(v)}</span></div><div class="chart-bar-bg"><div class="chart-bar-fg" style="width:${pct(v,maxM)}%;background:var(--up-orange)"></div></div></div>`;}).join(''):`<div class="empty" style="padding:14px">Sem dados de contratos com data.</div>`;
+  const porMes={};
+  S.contratos.forEach(c=>{
+    const dataNorm=parseSheetDate(c.data);
+    if(!dataNorm)return;
+    const m=dataNorm.slice(0,7);
+    porMes[m]=(porMes[m]||0)+1;
+  });
+  const meses=Object.keys(porMes).sort();
+  const maxM=Math.max(...Object.values(porMes),1);
+  document.getElementById('rel-evolucao').innerHTML=meses.length?meses.map(m=>{
+    const q=porMes[m];
+    const dt=new Date(m+'-01T00:00:00');
+    const lbl=dt.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});
+    return`<div class="chart-bar-item"><div class="chart-bar-label"><span>${lbl}</span><span style="font-weight:800;color:var(--up-orange)">${q} contrato${q>1?'s':''}</span></div><div class="chart-bar-bg"><div class="chart-bar-fg" style="width:${pct(q,maxM)}%;background:var(--up-orange)"></div></div></div>`;
+  }).join(''):`<div class="empty" style="padding:14px">Sem dados de contratos com data.</div>`;
 }
 
 // ═══ SALVAR MODAIS ═══
 function salvarContrato(){
-  const nome=document.getElementById('cc-nome').value.trim();
   const condo=document.getElementById('cc-condo').value;
   const setor=document.getElementById('cc-setor').value;
   const lote=document.getElementById('cc-lote').value.trim();
   const valor=document.getElementById('cc-valor').value;
   const pagto=document.getElementById('cc-pagto').value;
   const valorFinal=document.getElementById('cc-valor-final').value||valor;
-  if(!nome||!condo||!lote||!valor||!pagto){toast('Preencha os campos obrigatórios ★','err');return;}
-  S.contratos.push({nome,cpf:document.getElementById('cc-cpf').value,condo,setor,lote,area:document.getElementById('cc-area').value,pm2:document.getElementById('cc-pm2').value,valor:Number(valor),valorFinal:Number(valorFinal),pagto,tipo:document.getElementById('cc-tipo').value,status:document.getElementById('cc-status').value,data:document.getElementById('cc-data').value||new Date().toISOString().split('T')[0],obs:document.getElementById('cc-obs').value});
+  if(!condo||!lote||!valor||!pagto){toast('Preencha os campos obrigatórios ★','err');return;}
+  S.contratos.push({
+    condo,
+    condominio:condo,
+    setor,
+    lote,
+    area:document.getElementById('cc-area').value,
+    pm2:document.getElementById('cc-pm2').value,
+    valor:Number(valor),
+    valorFinal:Number(valorFinal),
+    pagto,
+    tipo:document.getElementById('cc-tipo').value,
+    status:document.getElementById('cc-status').value,
+    data:document.getElementById('cc-data').value||new Date().toISOString().split('T')[0],
+    obs:document.getElementById('cc-obs').value
+  });
   normalizeContratos();
   saveS();hide_ov('ov-contrato');toast('Contrato salvo!','ok');
   selectedCond='';
-  ['cc-nome','cc-cpf','cc-lote','cc-area','cc-pm2','cc-valor','cc-obs','cc-pagto','cc-valor-final'].forEach(id=>document.getElementById(id).value='');
+  ['cc-lote','cc-area','cc-pm2','cc-valor','cc-obs','cc-pagto','cc-valor-final'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cc-condo').value='';document.getElementById('cc-setor').value='';
-  renderContratos();renderDashboard();
+  renderContratos();renderDashboard();renderRelatorios();
 }
 function salvarAcao(){
   const acao=document.getElementById('ac-acao').value.trim();const inicio=document.getElementById('ac-inicio').value;
