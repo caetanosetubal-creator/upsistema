@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-const scriptUrl = 'https://script.google.com/macros/s/AKfycbzhGrcRumCyQDfPYWbe99XqS1K2tTQI2BN9H7xHKbo9F9XaI98N-eIAd2vQsnuf2fTUEg/exec';
+const scriptUrl = 'https://script.google.com/macros/s/AKfycbzO5DKp1jAB0_hQSHYy0m6ISr0bF8Cy0RTNTWUKC20lnsbUtF8fa6hKsZDTDtRjiX_K/exec';
   if (!scriptUrl) {
     return res.status(500).json({
       ok: false,
