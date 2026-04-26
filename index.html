@@ -971,7 +971,7 @@ const S={contratos:[],acoes:[],categorias:[],micros:[],gastos:[],midia:[],cfg:{m
 // GOOGLE SHEETS — OPÇÃO 2: localStorage + polling automático
 // ══════════════════════════════════════════════════════════════
 const SHEETS_KEYS=['contratos','acoes','categorias','micros','gastos','midia','cfg'];
-let SCRIPT_URL=localStorage.getItem('up5_script_url')||'';
+let SCRIPT_URL='/api/sheets';
 let gsConnected=false;
 let gsPollingId=null;
 
@@ -988,11 +988,10 @@ function setConn(ok,msg){
 // ── Salvar URL do script ───────────────────────────────────────
 function salvarScriptUrl(){
   const url=document.getElementById('cfg-sheets-url').value.trim();
-  if(!url){toast('Cole a URL do Apps Script','err');return;}
-  SCRIPT_URL=url;
-  localStorage.setItem('up5_script_url',url);
-  toast('URL salva! Clique em Inicializar Sheets.','ok');
-  document.getElementById('sheets-msg').textContent='URL salva. Clique em "Inicializar Sheets" para criar as abas na planilha.';
+  if(url) localStorage.setItem('up5_script_url_ref',url);
+  SCRIPT_URL='/api/sheets';
+  toast('Configuração salva! Sistema usando proxy do Vercel.','ok');
+  document.getElementById('sheets-msg').textContent='Proxy ativo. Clique em "Inicializar Sheets" ou "Sincronizar agora".';
 }
 
 // ── Chamada à API do Apps Script ──────────────────────────────
@@ -1020,8 +1019,9 @@ function loadS(){
   normalizeContratos();
   syncConfigInputs();
   // Preenche URL salva no campo de config
-  const urlEl=document.getElementById('cfg-sheets-url');
-  if(urlEl&&SCRIPT_URL)urlEl.value=SCRIPT_URL;
+const urlEl=document.getElementById('cfg-sheets-url');
+const refUrl=localStorage.getItem('up5_script_url_ref')||'';
+if(urlEl)urlEl.value=refUrl;
 }
 
 function syncConfigInputs(){
