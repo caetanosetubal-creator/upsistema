@@ -1,6 +1,5 @@
 export default async function handler(req, res) {
-const scriptUrl = process.env.APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzk0X3UxW91i6rqoUbpQeJoJZtasUfvk51YEWbhWD-bQoGk3PEe9Mcd5jCcTJ2yVglzLQ/exec';
-  if (!scriptUrl) {
+const scriptUrl = process.env.APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbweD5kT1VBX6Nuxpi37TwT20wtNbWRB5xkStYKsWHx2Pv__pOxatMPiY0cESLQ4E6kPCA/exec';  if (!scriptUrl) {
     return res.status(500).json({
       ok: false,
       error: 'APPS_SCRIPT_URL não configurada no Vercel'
