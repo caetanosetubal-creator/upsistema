@@ -2361,62 +2361,109 @@ function sPrint(){
   window.print();
 }
 function sAlert(msg){document.getElementById('s-result').innerHTML='<div class="s-alert">'+msg+'</div>';}
+
+function simAreaNum(v){return Number(v).toLocaleString('pt-BR',{maximumFractionDigits:2});}
+
 function simCab(nome,lote,resp,setor,condo,area,pm2,VT,cor,nota,mediaEfetiva,pm2Excedente){
-  var detalhePm2 = mediaEfetiva && Math.abs(mediaEfetiva-pm2)>0.01
-    ? '<em>média efetiva: '+simPM2(mediaEfetiva)+'</em>'
-    : '';
-  var detalheNota = nota ? '<div class="s-cab-resp">'+nota+(pm2Excedente&&Math.abs(pm2Excedente-pm2)>0.01?' Excedente: <b>'+simPM2(pm2Excedente)+'/m²</b>.':'')+'</div>' : '';
   return '<div class="s-cab" style="border-left-color:'+cor+'">'
     +'<div class="s-cab-l"><span class="s-tag">Cliente</span>'
     +'<div class="s-cab-nome">'+nome+'</div>'
     +(lote?'<div class="s-cab-lote-num">Lote: <b>'+lote+'</b></div>':'')
     +(resp?'<div class="s-cab-resp">Resp.: <b>'+resp+'</b></div>':'')
-    +detalheNota
     +'<div class="s-cab-sub"><span class="s-pill" style="background:'+cor+'">'+setor+'</span>'+condo+'</div>'
     +'</div><div class="s-cab-r">'
-    +'<div class="s-kpim"><span>\u00c1rea</span><b>'+area.toLocaleString('pt-BR')+'&nbsp;m\u00b2</b></div>'
-    +'<div class="s-kpim"><span>R$/m\u00b2 base</span><b>'+simPM2(pm2)+'</b>'+detalhePm2+'</div>'
-    +'<div class="s-kpim"><span>Valor tabela</span><b class="s-ora">'+simBRL(VT)+'</b></div>'
+    +'<div class="s-kpim"><span>Área total</span><b>'+simAreaNum(area)+'&nbsp;m²</b></div>'
+    +'<div class="s-kpim"><span>Valor base do m²</span><b>'+simPM2(pm2)+'</b></div>'
+    +'<div class="s-kpim"><span>Valor de tabela do lote</span><b class="s-ora">'+simBRL(VT)+'</b></div>'
     +'</div></div>';
 }
+
+function simResumoCalculo(area,pm2,VT,cor,pricing){
+  var isJe2 = pricing && pricing.isJe2;
+  var card = '<div class="s-card" style="--cc:'+cor+'">'
+    +'<div class="s-card-hd"><span class="s-card-ttl">Como o valor do lote foi calculado</span>'
+    +'<span class="s-chip" style="background:'+cor+'">Resumo do cálculo</span></div>';
+
+  if(isJe2){
+    var areaCheia = Math.min(Number(area||0),500);
+    var areaExced = Math.max(Number(area||0)-500,0);
+    var pm2Ex = pricing.pm2Excedente || (pm2*0.70);
+    var valorCheio = areaCheia * pm2;
+    var valorExced = areaExced * pm2Ex;
+
+    card += '<div style="padding:16px 18px;display:grid;gap:12px">'
+      +'<div style="font-size:12px;color:#475569;line-height:1.6">No Jardim Europa II, até 500 m² aplica-se o valor cheio do metro quadrado. A área excedente recebe 30% de desconto.</div>'
+      +'<div style="display:grid;gap:10px">'
+      +'<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding-bottom:10px;border-bottom:1px solid #F1F5F9">'
+      +'<div><div style="font-size:13px;font-weight:800;color:#0F172A">Até 500 m² pelo valor cheio</div><div style="font-size:12px;color:#64748B">'+simAreaNum(areaCheia)+' m² × '+simPM2(pm2)+'</div></div>'
+      +'<div style="font-size:16px;font-weight:900;color:#0F172A;white-space:nowrap">'+simBRL(valorCheio)+'</div></div>'
+      +'<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding-bottom:10px;border-bottom:1px solid #F1F5F9">'
+      +'<div><div style="font-size:13px;font-weight:800;color:#0F172A">Área excedente com 30% de desconto</div><div style="font-size:12px;color:#64748B">'+simAreaNum(areaExced)+' m² × '+simPM2(pm2Ex)+'</div></div>'
+      +'<div style="font-size:16px;font-weight:900;color:#0F172A;white-space:nowrap">'+simBRL(valorExced)+'</div></div>'
+      +'<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">'
+      +'<div><div style="font-size:13px;font-weight:800;color:#0F172A">Valor de tabela do lote</div><div style="font-size:12px;color:#64748B">Soma da área cheia com a área excedente descontada</div></div>'
+      +'<div style="font-size:18px;font-weight:900;color:'+cor+';white-space:nowrap">'+simBRL(VT)+'</div></div>'
+      +'</div></div>';
+  } else {
+    card += '<div style="padding:16px 18px;display:grid;gap:12px">'
+      +'<div style="font-size:12px;color:#475569;line-height:1.6">O valor de tabela do lote resulta da multiplicação da área total pelo valor base do metro quadrado.</div>'
+      +'<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">'
+      +'<div><div style="font-size:13px;font-weight:800;color:#0F172A">Cálculo do lote</div><div style="font-size:12px;color:#64748B">'+simAreaNum(area)+' m² × '+simPM2(pm2)+'</div></div>'
+      +'<div style="font-size:18px;font-weight:900;color:'+cor+';white-space:nowrap">'+simBRL(VT)+'</div></div>'
+      +'</div>';
+  }
+
+  return card + '</div>';
+}
+
+function simInfoComplementar(texto){
+  return '<div class="s-aviso" style="background:#F8FAFC;color:#475569;border-top:1px solid #E2E8F0">ℹ '+texto+'</div>';
+}
+
 function simCond(cond,VT,pm2,cor,area,pricing){
-  var M={avista:{l:'\u00c0 Vista',d:'25% desc.',f:0.75,t:'av'},
-    ent50:{l:'Entrada 50%+12\u00d7',d:'15% desc.',f:0.85,t:'e50'},
-    ent25:{l:'Entrada 25%+12\u00d7',d:'7,5% desc.',f:0.925,t:'e25'},
+  var M={avista:{l:'À Vista',d:'25% desc.',f:0.75,t:'av'},
+    ent50:{l:'Entrada 50%+12×',d:'15% desc.',f:0.85,t:'e50'},
+    ent25:{l:'Entrada 25%+12×',d:'7,5% desc.',f:0.925,t:'e25'},
     '3x':{l:'3 Vezes',d:'15% desc.',f:0.85,t:'3x'},
     '6x':{l:'6 Vezes',d:'10% desc.',f:0.90,t:'6x'},
-    '12x':{l:'12 Vezes',d:'5%',f:0.95,t:'12x'}};
+    '12x':{l:'12 Vezes',d:'5% desc.',f:0.95,t:'12x'}};
   var c=M[cond];if(!c)return '';
   var vf=VT*c.f,ent=0,parc=0,pL='',n=0;
-  if(c.t==='e50'){ent=vf*.5;parc=ent/12;pL='m\u00eas';n=12;}
-  else if(c.t==='e25'){ent=vf*.25;parc=vf*.75/12;pL='m\u00eas';n=12;}
+  if(c.t==='e50'){ent=vf*.5;parc=ent/12;pL='mês';n=12;}
+  else if(c.t==='e25'){ent=vf*.25;parc=vf*.75/12;pL='mês';n=12;}
   else if(c.t==='3x'){parc=vf/3;pL='parcela';n=3;}
-  else if(c.t==='6x'){parc=vf/6;pL='m\u00eas';n=6;}
-  else if(c.t==='12x'){parc=vf/12;pL='m\u00eas';n=12;}
-  var isJe2=pricing&&pricing.isJe2;
-  var pm2Desc = area ? (vf/area) : (pm2*c.f);
-  var detalheDesc = isJe2
-    ? '<em>m\u00e9dia efetiva do lote</em><em>refer\u00eancia cheia c/ desc.: '+simPM2(pm2*c.f)+'</em>'
-    : '<em>tabela: '+simPM2(pm2)+'</em>';
+  else if(c.t==='6x'){parc=vf/6;pL='mês';n=6;}
+  else if(c.t==='12x'){parc=vf/12;pL='mês';n=12;}
+
+  var pm2Efetivo = area ? (vf/area) : (pm2*c.f);
   var h='<div class="s-card" style="--cc:'+cor+'">'
     +'<div class="s-card-hd"><span class="s-card-ttl">'+c.l+'</span>'
     +'<span class="s-chip" style="background:'+cor+'">'+c.d+'</span></div>'
     +'<div class="s-nums">'
-    +'<div class="s-num"><span>R$/m\u00b2 com desconto</span>'
-    +'<b style="color:'+cor+'">'+simPM2(pm2Desc)+'</b>'+detalheDesc+'</div>'
-    +'<div class="s-num"><span>Valor total</span>'
+    +'<div class="s-num"><span>Valor de tabela do lote</span><b>'+simBRL(VT)+'</b></div>'
+    +'<div class="s-num"><span>Valor final desta condição</span>'
     +'<b style="color:'+cor+'">'+simBRL(vf)+'</b><em>economia: '+simBRL(VT-vf)+'</em></div>';
-  if(c.t==='av')h+='<div class="s-num"><span>Forma</span><b>Pagamento \u00fanico</b></div>';
-  else if(ent>0)h+='<div class="s-num"><span>Entrada ('+Math.round(ent/vf*100)+'%)</span>'
-    +'<b style="color:#059669">'+simBRL(ent)+'</b></div>'
-    +'<div class="s-num"><span>'+n+'\u00d7 mensais sem juros</span>'
-    +'<b style="color:'+cor+'">'+simBRL(parc)+'<small>/m\u00eas</small></b></div>';
-  else if(parc>0)h+='<div class="s-num"><span>'+n+'\u00d7 sem juros</span>'
-    +'<b style="color:'+cor+'">'+simBRL(parc)+'<small>/'+pL+'</small></b></div>';
-  return h+'</div></div>';
+
+  if(c.t==='av'){
+    h+='<div class="s-num"><span>Desconto da campanha</span><b>25%</b></div>'
+      +'<div class="s-num"><span>Forma de pagamento</span><b>Pagamento único</b></div>';
+  }else if(ent>0){
+    h+='<div class="s-num"><span>Entrada</span><b style="color:#059669">'+simBRL(ent)+'</b><em>'+Math.round(ent/vf*100)+'% do valor final</em></div>'
+      +'<div class="s-num"><span>Parcelamento</span><b style="color:'+cor+'">'+simBRL(parc)+'</b><em>'+n+'× mensais sem juros</em></div>';
+  }else{
+    h+='<div class="s-num"><span>Parcelamento</span><b style="color:'+cor+'">'+simBRL(parc)+'</b><em>'+n+'× sem juros</em></div>'
+      +'<div class="s-num"><span>Desconto da campanha</span><b>'+(Math.round((1-c.f)*1000)/10).toString().replace('.',',')+'%</b></div>';
+  }
+
+  var complemento='Valor médio efetivo por m² nesta condição: <b>'+simPM2(pm2Efetivo)+'</b>.';
+  if(pricing&&pricing.isJe2){
+    complemento+=' No Jardim Europa II, esse valor já considera o desconto de 30% aplicado apenas sobre a área excedente do lote.';
+  }
+
+  return h+'</div>'+simInfoComplementar(complemento)+'</div>';
 }
+
 function simVenc(i, diaVenc, dataBase){
-  // dataBase: string 'YYYY-MM-DD' da primeira parcela (mês seguinte ao da simulação)
   var d = new Date(dataBase);
   d.setMonth(d.getMonth() + (i-1));
   d.setDate(diaVenc);
@@ -2434,37 +2481,37 @@ function simFin(VT, pm2, n, cor, diaVenc, dataBase){
     rS+='<tr><td>'+i+'</td>'+venc+'<td>'+simBRL(pS)+'</td><td>'+simBRL(am)+'</td><td>'+simBRL(jS)+'</td></tr>';
   }
   var s1=VT*r+am, sN=(VT-(n-1)*am)*r+am;
-  var nota=n<=36?'Sem corre\u00e7\u00e3o':'+ IPCA da 1\u00aa \u00e0 \u00faltima';
+  var nota=n<=36?'Sem correção monetária':'IPCA da 1ª à última parcela';
   var uid='u'+Math.random().toString(36).slice(2,8);
   var thCols = usaData
-    ? '<th>Parc.</th><th>Vencimento</th><th>Valor</th><th>Amortiza\u00e7\u00e3o</th><th>Juros</th>'
-    : '<th>Parc.</th><th>Valor</th><th>Amortiza\u00e7\u00e3o</th><th>Juros</th>';
+    ? '<th>Parc.</th><th>Vencimento</th><th>Valor</th><th>Amortização</th><th>Juros</th>'
+    : '<th>Parc.</th><th>Valor</th><th>Amortização</th><th>Juros</th>';
   var th='<thead><tr>'+thCols+'</tr></thead>';
+
   return '<div class="s-card" style="--cc:'+cor+'">'
-    +'<div class="s-card-hd"><span class="s-card-ttl">Financiamento '+n+'\u00d7</span>'
-    +'<span class="s-chip" style="background:#374151">12% a.a. \u00b7 '+nota+'</span></div>'
+    +'<div class="s-card-hd"><span class="s-card-ttl">Financiamento '+n+'×</span>'
+    +'<span class="s-chip" style="background:#374151">12% a.a. · '+nota+'</span></div>'
     +'<div class="s-nums">'
     +'<div class="s-num"><span>Valor financiado</span><b>'+simBRL(VT)+'</b></div>'
-    +'<div class="s-num"><span>Price \u00b7 parcela fixa</span>'
-    +'<b style="color:'+cor+'">'+simBRL(pP)+'<small>/m\u00eas</small></b><em>Total: '+simBRL(totP)+'</em></div>'
-    +'<div class="s-num"><span>SAC \u00b7 1\u00aa parcela</span>'
-    +'<b style="color:#2563EB">'+simBRL(s1)+'<small>/m\u00eas</small></b><em>\u00daltima: '+simBRL(sN)+' \u00b7 Total: '+simBRL(totS)+'</em></div>'
+    +'<div class="s-num"><span>Parcela estimada · Price</span>'
+    +'<b style="color:'+cor+'">'+simBRL(pP)+'<small>/mês</small></b><em>Total estimado: '+simBRL(totP)+'</em></div>'
+    +'<div class="s-num"><span>Comparativo · SAC</span>'
+    +'<b style="color:#2563EB">'+simBRL(s1)+'<small>/mês</small></b><em>Última: '+simBRL(sN)+'</em></div>'
+    +'<div class="s-num"><span>Totais estimados</span><b>Price x SAC</b><em>'+simBRL(totP)+' · '+simBRL(totS)+'</em></div>'
     +'</div>'
-    +(n>=37?'<div class="s-aviso">⚠ Simulação calculada com juros de 12% ao ano, equivalentes a 0,948879% ao mês. Em financiamentos acima de 36 parcelas, haverá incidência de correção monetária pelo IPCA da primeira até a última parcela, conforme as regras da campanha.</div>':'<div class="s-aviso">⚠ Simulação calculada com juros de 12% ao ano, equivalentes a 0,948879% ao mês, sem correção monetária.</div>')
+    +'<div class="s-aviso">⚠ Sistema principal da campanha: <b>Price</b>. A tabela <b>SAC</b> é exibida como comparativo. '+(n>=37?'Nos financiamentos acima de 36 parcelas, haverá incidência de correção monetária pelo IPCA da primeira até a última parcela.':'Nesta simulação, não há correção monetária.')+'</div>'
     +'<div class="s-tabs">'
     +'<div class="s-tabs-hd no-print">'
-    +'<button class="s-tab on" onclick="sTabSwitch(this,\''+uid+'p\')">Price \u00b7 '+n+' parcelas</button>'
-    +'<button class="s-tab" onclick="sTabSwitch(this,\''+uid+'s\')">SAC \u00b7 '+n+' parcelas</button>'
+    +'<button class="s-tab on" onclick="sTabSwitch(this,\''+uid+'p\')">Price · '+n+' parcelas</button>'
+    +'<button class="s-tab" onclick="sTabSwitch(this,\''+uid+'s\')">SAC · '+n+' parcelas</button>'
     +'</div>'
     +'<div class="s-tabs-2col">'
-    // Tabela Price
     +'<div class="s-tblwrap" id="'+uid+'p">'
     +'<div class="s-tblttl no-print">Price</div>'
     +'<div class="s-tblttl only-print">Price</div>'
     +'<table class="'+(usaData?'s-tbl has-date':'s-tbl')+'">'+th+'<tbody>'+rP+'</tbody>'
     +'<tfoot><tr><td><b>Total</b></td>'+(usaData?'<td></td>':'')+'<td><b>'+simBRL(totP)+'</b></td><td colspan="2"></td></tr></tfoot>'
     +'</table></div>'
-    // Tabela SAC
     +'<div class="s-tblwrap s-tblwrap-sac" id="'+uid+'s">'
     +'<div class="s-tblttl no-print">SAC</div>'
     +'<div class="s-tblttl only-print">SAC</div>'
@@ -2476,42 +2523,50 @@ function simFin(VT, pm2, n, cor, diaVenc, dataBase){
 }
 
 function simTodas(VT,pm2,cor,area,pricing){
-  var C=[{l:'\u00c0 Vista',d:'25%',f:0.75,t:'av'},{l:'Ent.50%+12\u00d7',d:'15%',f:0.85,t:'e50'},
-    {l:'Ent.25%+12\u00d7',d:'7,5%',f:0.925,t:'e25'},{l:'3 Vezes',d:'15%',f:0.85,t:'3x'},
+  var C=[{l:'À Vista',d:'25%',f:0.75,t:'av'},{l:'Ent.50%+12×',d:'15%',f:0.85,t:'e50'},
+    {l:'Ent.25%+12×',d:'7,5%',f:0.925,t:'e25'},{l:'3 Vezes',d:'15%',f:0.85,t:'3x'},
     {l:'6x',d:'10%',f:0.90,t:'6x'},{l:'12x',d:'5%',f:0.95,t:'12x'}];
-  var isJe2=pricing&&pricing.isJe2;
+
   var rows=C.map(function(c){
-    var vf=VT*c.f,ent='&mdash;',parc='&mdash;';
-    var pm2Linha = area ? (vf/area) : (pm2*c.f);
-    var descPm2 = isJe2
-      ? simPM2(pm2Linha)+'<br><small>ref. cheia c/ desc.: '+simPM2(pm2*c.f)+'</small>'
-      : simPM2(pm2*c.f);
-    if(c.t==='av')parc='Pag. \u00fanico';
-    else if(c.t==='e50'){ent=simBRL(vf*.5);parc=simBRL(vf*.5/12)+'/m\u00eas';}
-    else if(c.t==='e25'){ent=simBRL(vf*.25);parc=simBRL(vf*.75/12)+'/m\u00eas';}
+    var vf=VT*c.f,ent='—',parc='—',obs='Economia: '+simBRL(VT-vf);
+    if(c.t==='av')parc='Pagamento único';
+    else if(c.t==='e50'){ent=simBRL(vf*.5);parc=simBRL(vf*.5/12)+'/mês';}
+    else if(c.t==='e25'){ent=simBRL(vf*.25);parc=simBRL(vf*.75/12)+'/mês';}
     else if(c.t==='3x')parc=simBRL(vf/3)+'/vez';
-    else if(c.t==='6x')parc=simBRL(vf/6)+'/m\u00eas';
-    else if(c.t==='12x')parc=simBRL(vf/12)+'/m\u00eas';
-    return '<tr><td><b>'+c.l+'</b><br><small>'+c.d+'</small></td>'
-      +'<td>'+descPm2+'</td><td><b style="color:'+cor+'">'+simBRL(vf)+'</b></td>'
-      +'<td>'+ent+'</td><td>'+parc+'</td></tr>';
+    else if(c.t==='6x')parc=simBRL(vf/6)+'/mês';
+    else if(c.t==='12x')parc=simBRL(vf/12)+'/mês';
+
+    obs += '<br><small>Valor médio por m²: '+simPM2(area ? (vf/area) : (pm2*c.f))+'</small>';
+
+    return '<tr><td><b>'+c.l+'</b></td>'
+      +'<td>'+c.d+'</td>'
+      +'<td><b style="color:'+cor+'">'+simBRL(vf)+'</b></td>'
+      +'<td>'+ent+'</td>'
+      +'<td>'+parc+'</td>'
+      +'<td>'+obs+'</td></tr>';
   }).join('');
+
   var rF=[36,60,90,120].map(function(n){
     var r=S_JUROS,pP=simPrice(VT,n,r),totP=pP*n;
     var a=VT/n,s=VT,totS=0,s1=s*r+a,sN=(s-(n-1)*a)*r+a;
     for(var i=0;i<n;i++){totS+=a+s*r;s-=a;}
-    return '<tr><td><b>'+n+'\u00d7 Fin.</b><br><small>12%a.a.'+(n<=36?' s/cor.':'+IPCA 1ª-últ.')+'</small></td>'
-      +'<td>'+simPM2(area ? (VT/area) : pm2)+'</td><td>'+simBRL(VT)+'</td><td>&mdash;</td>'
-      +'<td><b>'+simBRL(pP)+'/m\u00eas</b> (tot:'+simBRL(totP)+')<br>'
-      +'<small>SAC:'+simBRL(s1)+'\u2192'+simBRL(sN)+' tot:'+simBRL(totS)+'</small></td></tr>';
+    return '<tr><td><b>'+n+'× Financiamento</b></td>'
+      +'<td>12% a.a.'+(n<=36?'<br><small>Sem correção</small>':'<br><small>IPCA da 1ª à última</small>')+'</td>'
+      +'<td>'+simBRL(VT)+'</td>'
+      +'<td>—</td>'
+      +'<td><b>Price:</b> '+simBRL(pP)+'/mês</td>'
+      +'<td><small><b>Total Price:</b> '+simBRL(totP)+'<br><b>SAC:</b> '+simBRL(s1)+' → '+simBRL(sN)+'<br><b>Total SAC:</b> '+simBRL(totS)+'</small></td></tr>';
   }).join('');
+
   return '<div class="s-card" style="--cc:'+cor+'">'
-    +'<div class="s-card-hd"><span class="s-card-ttl">Todas as Condi\u00e7\u00f5es</span>'
+    +'<div class="s-card-hd"><span class="s-card-ttl">Todas as Condições</span>'
     +'<span class="s-chip" style="background:'+cor+'">Comparativo</span></div>'
-    +'<div style="overflow-x:auto"><table class="s-tbl"><thead><tr>'
-    +'<th>Condi\u00e7\u00e3o</th><th>R$/m\u00b2</th><th>Total</th><th>Entrada</th><th>Parcela</th>'
+    +'<div style="padding:10px 18px 0;color:#64748B;font-size:12px">Compare o valor final, a entrada e a forma de pagamento de cada condição.</div>'
+    +'<div style="overflow-x:auto;padding:12px 18px 18px"><table class="s-tbl"><thead><tr>'
+    +'<th>Condição</th><th>Desconto / Regra</th><th>Valor final</th><th>Entrada</th><th>Parcela / pagamento</th><th>Observações</th>'
     +'</tr></thead><tbody>'+rows+rF+'</tbody></table></div></div>';
 }
+
 
 function sCalc(){
   var nome=(document.getElementById('s-nome').value||'').trim();
@@ -2531,6 +2586,7 @@ function sCalc(){
   var pricing=getPricingInfo(condo,area,pm2);
   var VT=pricing.valor,cor=S_COR[setor]||'#374151';
   var out=simCab(nome,lote,resp,setor,condo,area,pm2,VT,cor,pricing.nota,pricing.mediaEfetiva,pricing.pm2Excedente);
+  out+=simResumoCalculo(area,pm2,VT,cor,pricing);
   if(cond==='todas')out+=simTodas(VT,pm2,cor,area,pricing);
   else if(cond==='fin'){
     var n=parseInt(document.getElementById('s-nparc').value||'0');
