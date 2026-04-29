@@ -2379,13 +2379,13 @@ function simCab(nome,lote,resp,setor,condo,area,pm2,VT,cor,nota,mediaEfetiva,pm2
     +'<div class="s-kpim"><span>Valor tabela</span><b class="s-ora">'+simBRL(VT)+'</b></div>'
     +'</div></div>';
 }
-function simCond(cond,VT,pm2,cor){
+function simCond(cond,VT,pm2,cor,area,pricing){
   var M={avista:{l:'\u00c0 Vista',d:'25% desc.',f:0.75,t:'av'},
     ent50:{l:'Entrada 50%+12\u00d7',d:'15% desc.',f:0.85,t:'e50'},
     ent25:{l:'Entrada 25%+12\u00d7',d:'7,5% desc.',f:0.925,t:'e25'},
     '3x':{l:'3 Vezes',d:'15% desc.',f:0.85,t:'3x'},
     '6x':{l:'6 Vezes',d:'10% desc.',f:0.90,t:'6x'},
-    '12x':{l:'12 Vezes',d:'5% desc.',f:0.95,t:'12x'}};
+    '12x':{l:'12 Vezes',d:'5%',f:0.95,t:'12x'}};
   var c=M[cond];if(!c)return '';
   var vf=VT*c.f,ent=0,parc=0,pL='',n=0;
   if(c.t==='e50'){ent=vf*.5;parc=ent/12;pL='m\u00eas';n=12;}
@@ -2393,12 +2393,17 @@ function simCond(cond,VT,pm2,cor){
   else if(c.t==='3x'){parc=vf/3;pL='parcela';n=3;}
   else if(c.t==='6x'){parc=vf/6;pL='m\u00eas';n=6;}
   else if(c.t==='12x'){parc=vf/12;pL='m\u00eas';n=12;}
+  var isJe2=pricing&&pricing.isJe2;
+  var pm2Desc = area ? (vf/area) : (pm2*c.f);
+  var detalheDesc = isJe2
+    ? '<em>m\u00e9dia efetiva do lote</em><em>refer\u00eancia cheia c/ desc.: '+simPM2(pm2*c.f)+'</em>'
+    : '<em>tabela: '+simPM2(pm2)+'</em>';
   var h='<div class="s-card" style="--cc:'+cor+'">'
     +'<div class="s-card-hd"><span class="s-card-ttl">'+c.l+'</span>'
     +'<span class="s-chip" style="background:'+cor+'">'+c.d+'</span></div>'
     +'<div class="s-nums">'
     +'<div class="s-num"><span>R$/m\u00b2 com desconto</span>'
-    +'<b style="color:'+cor+'">'+simPM2(pm2*c.f)+'</b><em>tabela: '+simPM2(pm2)+'</em></div>'
+    +'<b style="color:'+cor+'">'+simPM2(pm2Desc)+'</b>'+detalheDesc+'</div>'
     +'<div class="s-num"><span>Valor total</span>'
     +'<b style="color:'+cor+'">'+simBRL(vf)+'</b><em>economia: '+simBRL(VT-vf)+'</em></div>';
   if(c.t==='av')h+='<div class="s-num"><span>Forma</span><b>Pagamento \u00fanico</b></div>';
@@ -2470,12 +2475,17 @@ function simFin(VT, pm2, n, cor, diaVenc, dataBase){
     +'</div></div>';
 }
 
-function simTodas(VT,pm2,cor){
+function simTodas(VT,pm2,cor,area,pricing){
   var C=[{l:'\u00c0 Vista',d:'25%',f:0.75,t:'av'},{l:'Ent.50%+12\u00d7',d:'15%',f:0.85,t:'e50'},
     {l:'Ent.25%+12\u00d7',d:'7,5%',f:0.925,t:'e25'},{l:'3 Vezes',d:'15%',f:0.85,t:'3x'},
-    {l:'6 Vezes',d:'10%',f:0.90,t:'6x'},{l:'12 Vezes',d:'5%',f:0.95,t:'12x'}];
+    {l:'6x',d:'10%',f:0.90,t:'6x'},{l:'12x',d:'5%',f:0.95,t:'12x'}];
+  var isJe2=pricing&&pricing.isJe2;
   var rows=C.map(function(c){
     var vf=VT*c.f,ent='&mdash;',parc='&mdash;';
+    var pm2Linha = area ? (vf/area) : (pm2*c.f);
+    var descPm2 = isJe2
+      ? simPM2(pm2Linha)+'<br><small>ref. cheia c/ desc.: '+simPM2(pm2*c.f)+'</small>'
+      : simPM2(pm2*c.f);
     if(c.t==='av')parc='Pag. \u00fanico';
     else if(c.t==='e50'){ent=simBRL(vf*.5);parc=simBRL(vf*.5/12)+'/m\u00eas';}
     else if(c.t==='e25'){ent=simBRL(vf*.25);parc=simBRL(vf*.75/12)+'/m\u00eas';}
@@ -2483,7 +2493,7 @@ function simTodas(VT,pm2,cor){
     else if(c.t==='6x')parc=simBRL(vf/6)+'/m\u00eas';
     else if(c.t==='12x')parc=simBRL(vf/12)+'/m\u00eas';
     return '<tr><td><b>'+c.l+'</b><br><small>'+c.d+'</small></td>'
-      +'<td>'+simPM2(pm2*c.f)+'</td><td><b style="color:'+cor+'">'+simBRL(vf)+'</b></td>'
+      +'<td>'+descPm2+'</td><td><b style="color:'+cor+'">'+simBRL(vf)+'</b></td>'
       +'<td>'+ent+'</td><td>'+parc+'</td></tr>';
   }).join('');
   var rF=[36,60,90,120].map(function(n){
@@ -2491,7 +2501,7 @@ function simTodas(VT,pm2,cor){
     var a=VT/n,s=VT,totS=0,s1=s*r+a,sN=(s-(n-1)*a)*r+a;
     for(var i=0;i<n;i++){totS+=a+s*r;s-=a;}
     return '<tr><td><b>'+n+'\u00d7 Fin.</b><br><small>12%a.a.'+(n<=36?' s/cor.':'+IPCA 1ª-últ.')+'</small></td>'
-      +'<td>'+simPM2(pm2)+'</td><td>'+simBRL(VT)+'</td><td>&mdash;</td>'
+      +'<td>'+simPM2(area ? (VT/area) : pm2)+'</td><td>'+simBRL(VT)+'</td><td>&mdash;</td>'
       +'<td><b>'+simBRL(pP)+'/m\u00eas</b> (tot:'+simBRL(totP)+')<br>'
       +'<small>SAC:'+simBRL(s1)+'\u2192'+simBRL(sN)+' tot:'+simBRL(totS)+'</small></td></tr>';
   }).join('');
@@ -2502,6 +2512,7 @@ function simTodas(VT,pm2,cor){
     +'<th>Condi\u00e7\u00e3o</th><th>R$/m\u00b2</th><th>Total</th><th>Entrada</th><th>Parcela</th>'
     +'</tr></thead><tbody>'+rows+rF+'</tbody></table></div></div>';
 }
+
 function sCalc(){
   var nome=(document.getElementById('s-nome').value||'').trim();
   var lote=(document.getElementById('s-lote').value||'').trim();
@@ -2520,14 +2531,14 @@ function sCalc(){
   var pricing=getPricingInfo(condo,area,pm2);
   var VT=pricing.valor,cor=S_COR[setor]||'#374151';
   var out=simCab(nome,lote,resp,setor,condo,area,pm2,VT,cor,pricing.nota,pricing.mediaEfetiva,pricing.pm2Excedente);
-  if(cond==='todas')out+=simTodas(VT,pm2,cor);
+  if(cond==='todas')out+=simTodas(VT,pm2,cor,area,pricing);
   else if(cond==='fin'){
     var n=parseInt(document.getElementById('s-nparc').value||'0');
     if(!n||n<13||n>120){sAlert('Prazo entre 13 e 120.');return;}
     var diaV=parseInt(document.getElementById('s-dia')&&document.getElementById('s-dia').value||'0');
     var dtB=(document.getElementById('s-dtbase')&&document.getElementById('s-dtbase').value)||'';
     out+=simFin(VT,pm2,n,cor,diaV,dtB);
-  }else out+=simCond(cond,VT,pm2,cor);
+  }else out+=simCond(cond,VT,pm2,cor,area,pricing);
   out+='<div id="s-rodape" class="s-rodape"></div>';
   document.getElementById('s-result').innerHTML=out;
 }
