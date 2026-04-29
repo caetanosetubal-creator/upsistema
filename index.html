@@ -761,7 +761,7 @@ body.auth-locked .auth-screen{display:flex}
         <button class="btn-q" onclick="simSetPrazo(60)">60&times;</button>
         <button class="btn-q" onclick="simSetPrazo(90)">90&times;</button>
         <button class="btn-q" onclick="simSetPrazo(120)">120&times;</button>
-        <span style="font-size:11px;color:#9CA3AF">13-36&times; s/corre&ccedil;&atilde;o &middot; 37-120&times; +IPCA</span>
+        <span style="font-size:11px;color:#9CA3AF">13-36&times; sem corre&ccedil;&atilde;o &middot; 37-120&times; + IPCA da 1&ordf; &agrave; &uacute;ltima</span>
       </div>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <div style="display:flex;flex-direction:column;gap:5px">
@@ -871,7 +871,7 @@ body.auth-locked .auth-screen{display:flex}
         <div id="sim-calc-hint" style="font-size:11px;color:var(--up-teal);font-weight:700"></div>
       </div>
       <div style="font-size:10px;color:var(--up-muted);margin-top:6px">
-        13–36×: 12% a.a. sem correção monetária &nbsp;|&nbsp; 37–120×: 12% a.a. + IPCA
+        13–36×: 12% a.a. sem correção monetária &nbsp;|&nbsp; 37–120×: 12% a.a. + IPCA da 1ª à última parcela
       </div>
     </div>
     <div id="sim-aviso" style="display:none" class="sim-aviso"></div>
@@ -889,10 +889,10 @@ body.auth-locked .auth-screen{display:flex}
     <div class="fsec">Informações Adicionais</div>
     <div class="fr c3">
       <div class="fg"><div class="fl">Tipo de Público</div>
-        <select class="fs" id="cc-tipo"><option>Não Aderente</option><option>Aderente s/ Escritura</option><option>Judicializado Aderente</option><option>Judicializado Não-Aderente</option></select>
+        <select class="fs" id="cc-tipo"><option>Não Aderente</option><option>Judicializado Não Aderente</option></select>
       </div>
       <div class="fg"><div class="fl">Status</div>
-        <select class="fs" id="cc-status"><option>Em negociação</option><option>Acordo assinado</option><option>Escritura emitida</option><option>Pago</option></select>
+        <select class="fs" id="cc-status"><option>Escritura</option><option>CP (Contrato de Compra e Venda)</option></select>
       </div>
       <div class="fg"><div class="fl">Data</div><input class="fi" type="date" id="cc-data"></div>
     </div>
@@ -1229,7 +1229,7 @@ const CONDO_SETOR={
   'JARDIM VITÓRIA':'CTG 2','RESIDENCIAL PLANALTO':'CTG 2',
   'RECANTO REAL':'BVT','MORADA DOS NOBRES':'BVT','VIVENDAS SERRANAS':'BVT','IMPÉRIO DOS NOBRES':'BVT','NOSSO LAR':'BVT',
 }
-const SETOR_PM2={'CTG 1':106.08,'CTG 2':173.43,'CTG 3':218.52,'GCL':220.30,'BVT':220.53};
+const SETOR_PM2={'CTG 1':117.95,'CTG 2':173.43,'CTG 3':218.52,'GCL':220.30,'BVT':220.53};
 
 // TOP 20 condomínios com VGV mediano
 const TOP20=[
@@ -1239,11 +1239,11 @@ const TOP20=[
   {n:'VIVENDAS DA SERRA',s:'CTG 3',vgv:4717289,lotes:36},
   {n:'MEUS SONHOS',s:'CTG 3',vgv:4288182,lotes:29},
   {n:'MANSÕES COLORADO',s:'GCL',vgv:3377748,lotes:31},
-  {n:'VILA VERDE',s:'CTG 1',vgv:2417492,lotes:54},
+  {n:'VILA VERDE',s:'CTG 1',vgv:2650030,lotes:54},
   {n:'RECANTO REAL',s:'BVT',vgv:1907046,lotes:16},
-  {n:'VILA ROSADA',s:'CTG 1',vgv:1557050,lotes:53},
+  {n:'VILA ROSADA',s:'CTG 1',vgv:1812614,lotes:53},
   {n:'MORADA DOS NOBRES',s:'BVT',vgv:1488455,lotes:14},
-  {n:'CASA ROSADA',s:'CTG 1',vgv:1419027,lotes:44},
+  {n:'CASA ROSADA',s:'CTG 1',vgv:1651936,lotes:44},
   {n:'RES. SOBRADINHO III',s:'CTG 1',vgv:1312275,lotes:36},
   {n:'VIVENDAS SERRANAS',s:'BVT',vgv:1233344,lotes:11},
   {n:'HALLEY',s:'CTG 3',vgv:1190625,lotes:19},
@@ -1252,7 +1252,7 @@ const TOP20=[
   {n:'IPANEMA',s:'CTG 3',vgv:1010998,lotes:8},
   {n:'IMPÉRIO DOS NOBRES',s:'BVT',vgv:830881,lotes:5},
   {n:'SOL NASCENTE',s:'CTG 3',vgv:754192,lotes:10},
-  {n:'BEM ESTAR',s:'CTG 1',vgv:590892,lotes:18},
+  {n:'BEM ESTAR',s:'CTG 1',vgv:685982,lotes:18},
   {n:'VIVENDAS FRIBURGO',s:'GCL',vgv:575042,lotes:5},
   {n:'SÃO JORGE',s:'CTG 3',vgv:494322,lotes:7},
   {n:'RECANTO DOS NOBRES',s:'CTG 3',vgv:350211,lotes:3},
@@ -1270,12 +1270,41 @@ function autoSetor(){
   document.getElementById('cc-setor').value=setor;
   const pm2=num(S_PM2[condo]||SETOR_PM2[setor]||0);
   if(pm2) document.getElementById('cc-pm2').value=pm2;
+  const info=document.querySelector('#cc-pm2')?.nextElementSibling;
+  if(info){
+    info.textContent=formatCondoName(condo)==='JARDIM EUROPA II'
+      ?'Pré-definido por condomínio (editável). No JEII, acima de 500 m² o excedente recebe 30% de desconto.'
+      :'Pré-definido por condomínio (editável)';
+  }
   calcContrato();
 }
 
 // ═══ CONDIÇÕES COMERCIAIS ═══
 const JUROS_AM=Math.pow(1.12,1/12)-1; // 0.9489% a.m.
 function calcPrice(pv,n,taxa){if(taxa===0)return pv/n;return pv*taxa/(1-Math.pow(1+taxa,-n));}
+function calcValorCampanha(condo,area,pm2){
+  area=Number(area||0);pm2=Number(pm2||0);
+  if(!area||!pm2)return 0;
+  if(formatCondoName(condo)==='JARDIM EUROPA II'&&area>500){
+    const base=500*pm2;
+    const exced=area-500;
+    return base+(exced*(pm2*0.70));
+  }
+  return area*pm2;
+}
+function getPricingInfo(condo,area,pm2){
+  area=Number(area||0);pm2=Number(pm2||0);
+  const valor=calcValorCampanha(condo,area,pm2);
+  const isJe2=formatCondoName(condo)==='JARDIM EUROPA II'&&area>500;
+  return {
+    valor,
+    isJe2,
+    pm2Base:pm2,
+    pm2Excedente:isJe2?pm2*0.70:pm2,
+    mediaEfetiva:area?valor/area:pm2,
+    nota:isJe2?'Regra JEII: até 500 m² pelo valor cheio e excedente com 30% de desconto.':''
+  };
+}
 
 // Condições comerciais fixas (com desconto)
 const CONDS_FIXAS=[
@@ -1285,7 +1314,7 @@ const CONDS_FIXAS=[
   {id:'12x',    label:'12×',      desc:'Desconto 5%',  parcelas:12, tipo:'desc', taxa:0.05},
 ];
 // Faixas de financiamento (usuário escolhe nº de parcelas)
-// 13–36: 12% a.a. sem IPCA | 37–120: 12% a.a. + IPCA (aviso)
+// 13–36: 12% a.a. sem correção monetária | 37–120: 12% a.a. + IPCA da 1ª à última parcela (aviso)
 let selectedCond='';
 function renderSimulador(){
   const vOrig=Number(document.getElementById('cc-valor').value||0);
@@ -1312,8 +1341,8 @@ function renderSimulador(){
   if(nParc>=13&&nParc<=120){
     const parc=calcPrice(vOrig,nParc,JUROS_AM);
     const vTotal=parc*nParc;
-    const faixa=nParc<=36?'13–36×: 12% a.a. sem correção monetária':'37–120×: 12% a.a. + IPCA (aviso)';
-    const aviso=nParc>=37?'⚠ A partir da 37ª parcela incide correção pelo IPCA. Valor final sujeito a reajuste.':'';
+    const faixa=nParc<=36?'13–36×: 12% a.a. sem correção monetária':'37–120×: 12% a.a. + IPCA da 1ª à última parcela';
+    const aviso=nParc>=37?'⚠ Simulação calculada com juros de 12% a.a. (0,948879% a.m.). Para financiamentos acima de 36 parcelas, haverá incidência de correção monetária pelo IPCA da primeira até a última parcela, conforme as regras da campanha.':'';
     const sel=selectedCond==='fin-'+nParc;
     financBlock=`<div class="sim-opt ${sel?'selected':''}" style="grid-column:1/-1;display:flex;align-items:center;gap:20px;flex-wrap:wrap" onclick="selecionarCondFin(${nParc},${vOrig},${vTotal})">
       <div style="flex:1;min-width:160px">
@@ -1342,16 +1371,16 @@ function selecionarCondFixa(id,vOrig,vFinal){
 }
 function selecionarCondFin(n,vOrig,vTotal){
   selectedCond='fin-'+n;
-  const faixa=n<=36?'Financiado '+n+'× · 12% a.a. sem correção':'Financiado '+n+'× · 12% a.a. + IPCA';
+  const faixa=n<=36?'Financiado '+n+'× · 12% a.a. sem correção':'Financiado '+n+'× · 12% a.a. + IPCA da 1ª à última';
   document.getElementById('cc-pagto').value=faixa;
   document.getElementById('cc-valor-final').value=Math.round(vTotal);
   document.getElementById('cc-n-parc').value=n;
   const aviso=document.getElementById('sim-aviso');
-  if(n>=37){aviso.style.display='block';aviso.textContent='⚠ A partir da 37ª parcela incide correção pelo IPCA sobre o saldo devedor. Valor total estimado sem IPCA.';}
-  else{aviso.style.display='block';aviso.textContent='⚠ Juros de 12% a.a. (0,9489% a.m.) da 13ª à '+n+'ª parcela. Sem correção monetária.';}
+  if(n>=37){aviso.style.display='block';aviso.textContent='⚠ Simulação calculada com juros de 12% a.a. (0,948879% a.m.). Para financiamentos acima de 36 parcelas, haverá incidência de correção monetária pelo IPCA da primeira até a última parcela, conforme as regras da campanha.';}
+  else{aviso.style.display='block';aviso.textContent='⚠ Simulação calculada com juros de 12% a.a. (0,948879% a.m.), sem correção monetária, para financiamento em '+n+' parcelas.';}
   renderSimulador();
 }
-function calcContrato(){selectedCond='';const a=Number(document.getElementById('cc-area').value||0);const p=Number(document.getElementById('cc-pm2').value||0);if(a&&p)document.getElementById('cc-valor').value=Math.round(a*p);renderSimulador();}
+function calcContrato(){selectedCond='';const a=Number(document.getElementById('cc-area').value||0);const p=Number(document.getElementById('cc-pm2').value||0);const condo=document.getElementById('cc-condo')?document.getElementById('cc-condo').value:'';if(a&&p)document.getElementById('cc-valor').value=Math.round(calcValorCampanha(condo,a,p));renderSimulador();}
 
 // ═══ HELPERS ═══
 const num=v=>{
@@ -1507,14 +1536,14 @@ const normalizeContratos=()=>{
       valorFinal:num(c.valorFinal||c.valor),
       pagto:pagamento,
       pagamento:pagamento,
-      tipo:pickField(c,['tipo','Tipo'])||'Contrato de Escritura',
-      status:pickField(c,['status','Status'])||'Em negociação',
+      tipo:pickField(c,['tipo','Tipo'])||'Não Aderente',
+      status:pickField(c,['status','Status'])||'CP (Contrato de Compra e Venda)',
       data:data||'',
       obs:pickField(c,['obs','Observações','Observacao','Observação'])
     };
   });
 };
-const STATUS_B={'Concluído':'b-g','Em andamento':'b-b','Planejado':'b-z','Aguardando':'b-a','Pago':'b-g','Pendente':'b-a','Aprovado':'b-b','Em negociação':'b-a','Acordo assinado':'b-b','Escritura emitida':'b-t','Pausado':'b-z'};
+const STATUS_B={'Concluído':'b-g','Em andamento':'b-b','Planejado':'b-z','Aguardando':'b-a','Pago':'b-g','Pendente':'b-a','Aprovado':'b-b','Em negociação':'b-a','Acordo assinado':'b-b','Escritura emitida':'b-t','Escritura':'b-t','CP (Contrato de Compra e Venda)':'b-b','Pausado':'b-z'};
 const badge=(t,c)=>`<span class="b ${c||STATUS_B[t]||'b-z'}">${t}</span>`;
 const iconBtn=(tip,cls,cb)=>`<button class="icon-btn ${cls}" onclick="${cb}" title="${tip}"><span class="tip">${tip}</span>${cls==='edit'?'<span style="display:inline-block;transform:rotate(-45deg)">✏</span>':'🗑'}</button>`;
 
@@ -2236,7 +2265,7 @@ function atualizarParcelas(){
       document.getElementById('cc-valor-final').value=Math.round(vTot);
     }
     // Atualiza condição selecionada
-    const faixa=n<=12?n+'× sem juros':n<=36?n+'× · 12% a.a. sem correção':n+'× · 12% a.a. + IPCA';
+    const faixa=n<=12?n+'× sem juros':n<=36?n+'× · 12% a.a. sem correção':n+'× · 12% a.a. + IPCA da 1ª à última';
     if(!document.getElementById('cc-pagto').value||document.getElementById('cc-pagto').value.includes('×')){
       document.getElementById('cc-pagto').value=faixa;
     }
@@ -2283,7 +2312,7 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeMobi
 // ═══ NAVEGAÇÃO (controlada por autenticação/perfil) ═══════════
 // ═══ SIMULADOR ══════════════════════════════════════════════════
 var S_CONDOS={"GCL": ["JARDIM EUROPA II", "MANSÕES COLORADO", "SOLAR DE ATHENAS", "VIVENDAS FRIBURGO"], "CTG 3": ["CARAVELO", "CHÁCARA PARAÍSO", "FRATERNIDADE", "HALLEY", "IPANEMA", "IPÊS", "MEUS SONHOS", "NOVO HORIZONTE", "RECANTO DOS NOBRES", "SOL NASCENTE", "SÃO JORGE", "VIVENDAS CAMPESTRE", "VIVENDAS DA SERRA"], "CTG 1": ["BEM ESTAR", "CASA ROSADA", "RES. SOBRADINHO III", "VILA ROSADA", "VILA VERDE"], "CTG 2": ["JARDIM VITÓRIA", "RESIDENCIAL PLANALTO"], "BVT": ["IMPÉRIO DOS NOBRES", "MORADA DOS NOBRES", "NOSSO LAR", "RECANTO REAL", "VIVENDAS SERRANAS"]};
-var S_PM2={"JARDIM EUROPA II": 244.89, "MANSÕES COLORADO": 216.93, "SOLAR DE ATHENAS": 190.7, "VIVENDAS FRIBURGO": 229.73, "CARAVELO": 166.13, "CHÁCARA PARAÍSO": 180.83, "FRATERNIDADE": 185.46, "HALLEY": 220.53, "IPANEMA": 220.53, "IPÊS": 220.53, "MEUS SONHOS": 220.53, "NOVO HORIZONTE": 220.53, "RECANTO DOS NOBRES": 220.53, "SOL NASCENTE": 220.53, "SÃO JORGE": 220.53, "VIVENDAS CAMPESTRE": 220.53, "VIVENDAS DA SERRA": 220.53, "BEM ESTAR": 101.6, "CASA ROSADA": 101.32, "RES. SOBRADINHO III": 117.95, "VILA ROSADA": 101.32, "VILA VERDE": 107.6, "JARDIM VITÓRIA": 149.6, "RESIDENCIAL PLANALTO": 220.53, "IMPÉRIO DOS NOBRES": 220.53, "MORADA DOS NOBRES": 220.53, "NOSSO LAR": 220.53, "RECANTO REAL": 220.53, "VIVENDAS SERRANAS": 220.53};
+var S_PM2={"JARDIM EUROPA II": 244.89, "MANSÕES COLORADO": 216.93, "SOLAR DE ATHENAS": 190.7, "VIVENDAS FRIBURGO": 229.73, "CARAVELO": 166.13, "CHÁCARA PARAÍSO": 180.83, "FRATERNIDADE": 185.46, "HALLEY": 220.53, "IPANEMA": 220.53, "IPÊS": 220.53, "MEUS SONHOS": 220.53, "NOVO HORIZONTE": 220.53, "RECANTO DOS NOBRES": 220.53, "SOL NASCENTE": 220.53, "SÃO JORGE": 220.53, "VIVENDAS CAMPESTRE": 220.53, "VIVENDAS DA SERRA": 220.53, "BEM ESTAR": 117.95, "CASA ROSADA": 117.95, "RES. SOBRADINHO III": 117.95, "VILA ROSADA": 117.95, "VILA VERDE": 117.95, "JARDIM VITÓRIA": 149.6, "RESIDENCIAL PLANALTO": 220.53, "IMPÉRIO DOS NOBRES": 220.53, "MORADA DOS NOBRES": 220.53, "NOSSO LAR": 220.53, "RECANTO REAL": 220.53, "VIVENDAS SERRANAS": 220.53};
 var S_JUROS=0.0094887929;
 var S_COR={"GCL":"#7C3AED","CTG 3":"#DC2626","CTG 1":"#059669","CTG 2":"#2563EB","BVT":"#D97706"};
 function simPrice(pv,n,r){return pv*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1);}
@@ -2328,20 +2357,25 @@ function sPrint(){
   var eN=document.getElementById('p-num');if(eN)eN.textContent=num;
   var eD=document.getElementById('p-data');if(eD)eD.textContent=dt;
   var rod=document.getElementById('s-rodape');
-  if(rod)rod.textContent='N\u00ba '+num+' \u00b7 '+dt+' \u00b7 Urbanizadora Paranoazinho S.A. \u00b7 Valores sujeitos a altera\u00e7\u00e3o';
+  if(rod)rod.textContent='Nº '+num+' · '+dt+' · Urbanizadora Paranoazinho S.A. · Simulação calculada com juros de 12% ao ano, equivalentes a 0,948879% ao mês. Nos financiamentos superiores a 36 parcelas, haverá incidência de correção monetária pelo IPCA da primeira até a última parcela, conforme as regras da campanha. Valores sujeitos a alteração.';
   window.print();
 }
 function sAlert(msg){document.getElementById('s-result').innerHTML='<div class="s-alert">'+msg+'</div>';}
-function simCab(nome,lote,resp,setor,condo,area,pm2,VT,cor){
+function simCab(nome,lote,resp,setor,condo,area,pm2,VT,cor,nota,mediaEfetiva,pm2Excedente){
+  var detalhePm2 = mediaEfetiva && Math.abs(mediaEfetiva-pm2)>0.01
+    ? '<em>média efetiva: '+simPM2(mediaEfetiva)+'</em>'
+    : '';
+  var detalheNota = nota ? '<div class="s-cab-resp">'+nota+(pm2Excedente&&Math.abs(pm2Excedente-pm2)>0.01?' Excedente: <b>'+simPM2(pm2Excedente)+'/m²</b>.':'')+'</div>' : '';
   return '<div class="s-cab" style="border-left-color:'+cor+'">'
     +'<div class="s-cab-l"><span class="s-tag">Cliente</span>'
     +'<div class="s-cab-nome">'+nome+'</div>'
     +(lote?'<div class="s-cab-lote-num">Lote: <b>'+lote+'</b></div>':'')
     +(resp?'<div class="s-cab-resp">Resp.: <b>'+resp+'</b></div>':'')
+    +detalheNota
     +'<div class="s-cab-sub"><span class="s-pill" style="background:'+cor+'">'+setor+'</span>'+condo+'</div>'
     +'</div><div class="s-cab-r">'
     +'<div class="s-kpim"><span>\u00c1rea</span><b>'+area.toLocaleString('pt-BR')+'&nbsp;m\u00b2</b></div>'
-    +'<div class="s-kpim"><span>R$/m\u00b2</span><b>'+simPM2(pm2)+'</b></div>'
+    +'<div class="s-kpim"><span>R$/m\u00b2 base</span><b>'+simPM2(pm2)+'</b>'+detalhePm2+'</div>'
     +'<div class="s-kpim"><span>Valor tabela</span><b class="s-ora">'+simBRL(VT)+'</b></div>'
     +'</div></div>';
 }
@@ -2395,7 +2429,7 @@ function simFin(VT, pm2, n, cor, diaVenc, dataBase){
     rS+='<tr><td>'+i+'</td>'+venc+'<td>'+simBRL(pS)+'</td><td>'+simBRL(am)+'</td><td>'+simBRL(jS)+'</td></tr>';
   }
   var s1=VT*r+am, sN=(VT-(n-1)*am)*r+am;
-  var nota=n<=36?'Sem corre\u00e7\u00e3o':'+ IPCA 37\u00aa+';
+  var nota=n<=36?'Sem corre\u00e7\u00e3o':'+ IPCA da 1\u00aa \u00e0 \u00faltima';
   var uid='u'+Math.random().toString(36).slice(2,8);
   var thCols = usaData
     ? '<th>Parc.</th><th>Vencimento</th><th>Valor</th><th>Amortiza\u00e7\u00e3o</th><th>Juros</th>'
@@ -2411,7 +2445,7 @@ function simFin(VT, pm2, n, cor, diaVenc, dataBase){
     +'<div class="s-num"><span>SAC \u00b7 1\u00aa parcela</span>'
     +'<b style="color:#2563EB">'+simBRL(s1)+'<small>/m\u00eas</small></b><em>\u00daltima: '+simBRL(sN)+' \u00b7 Total: '+simBRL(totS)+'</em></div>'
     +'</div>'
-    +(n>=37?'<div class="s-aviso">\u26a0 IPCA a partir da 37\u00aa parcela.</div>':'')
+    +(n>=37?'<div class="s-aviso">⚠ Simulação calculada com juros de 12% ao ano, equivalentes a 0,948879% ao mês. Em financiamentos acima de 36 parcelas, haverá incidência de correção monetária pelo IPCA da primeira até a última parcela, conforme as regras da campanha.</div>':'<div class="s-aviso">⚠ Simulação calculada com juros de 12% ao ano, equivalentes a 0,948879% ao mês, sem correção monetária.</div>')
     +'<div class="s-tabs">'
     +'<div class="s-tabs-hd no-print">'
     +'<button class="s-tab on" onclick="sTabSwitch(this,\''+uid+'p\')">Price \u00b7 '+n+' parcelas</button>'
@@ -2456,7 +2490,7 @@ function simTodas(VT,pm2,cor){
     var r=S_JUROS,pP=simPrice(VT,n,r),totP=pP*n;
     var a=VT/n,s=VT,totS=0,s1=s*r+a,sN=(s-(n-1)*a)*r+a;
     for(var i=0;i<n;i++){totS+=a+s*r;s-=a;}
-    return '<tr><td><b>'+n+'\u00d7 Fin.</b><br><small>12%a.a.'+(n<=36?' s/cor.':'+IPCA')+'</small></td>'
+    return '<tr><td><b>'+n+'\u00d7 Fin.</b><br><small>12%a.a.'+(n<=36?' s/cor.':'+IPCA 1ª-últ.')+'</small></td>'
       +'<td>'+simPM2(pm2)+'</td><td>'+simBRL(VT)+'</td><td>&mdash;</td>'
       +'<td><b>'+simBRL(pP)+'/m\u00eas</b> (tot:'+simBRL(totP)+')<br>'
       +'<small>SAC:'+simBRL(s1)+'\u2192'+simBRL(sN)+' tot:'+simBRL(totS)+'</small></td></tr>';
@@ -2483,8 +2517,9 @@ function sCalc(){
   if(!cond){sAlert('Selecione a condi\u00e7\u00e3o.');return;}
   var pm2=S_PM2[condo];
   if(!pm2){sAlert('Pre\u00e7o n\u00e3o encontrado.');return;}
-  var VT=area*pm2,cor=S_COR[setor]||'#374151';
-  var out=simCab(nome,lote,resp,setor,condo,area,pm2,VT,cor);
+  var pricing=getPricingInfo(condo,area,pm2);
+  var VT=pricing.valor,cor=S_COR[setor]||'#374151';
+  var out=simCab(nome,lote,resp,setor,condo,area,pm2,VT,cor,pricing.nota,pricing.mediaEfetiva,pricing.pm2Excedente);
   if(cond==='todas')out+=simTodas(VT,pm2,cor);
   else if(cond==='fin'){
     var n=parseInt(document.getElementById('s-nparc').value||'0');
