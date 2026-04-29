@@ -446,6 +446,38 @@ body.auth-locked .auth-screen{display:flex}
   .s-tbl.has-date th:nth-child(n+4), .s-tbl.has-date td:nth-child(n+4) { display: none !important; }
 }
 
+
+/* CONTRATOS · FILTROS PROFISSIONAIS */
+.contracts-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.contracts-search{flex:1;min-width:260px;max-width:420px}
+.contracts-toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.contracts-tool-btn{display:inline-flex;align-items:center;gap:6px}
+.contracts-caret{font-size:10px;color:var(--up-muted)}
+.contracts-chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.contracts-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:18px;background:var(--up-bg);border:1px solid var(--up-border);font-size:11px;font-weight:700;color:var(--up-dark)}
+.contracts-chip button{font-size:12px;color:var(--up-muted);line-height:1}
+.contracts-chip button:hover{color:var(--ok-red)}
+.contracts-popover{position:fixed;z-index:500;display:none;min-width:280px;max-width:340px;background:var(--up-white);border:1px solid var(--up-border);border-radius:14px;box-shadow:var(--sh2);padding:12px}
+.contracts-popover.on{display:block}
+.contracts-popover .cp-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.contracts-popover .cp-ttl{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--up-dark)}
+.contracts-popover .cp-close{font-size:18px;color:var(--up-muted);line-height:1}
+.contracts-popover .cp-close:hover{color:var(--up-orange)}
+.contracts-popover .cp-grid{display:grid;gap:10px}
+.contracts-popover .cp-grid.c2{grid-template-columns:1fr 1fr}
+.contracts-popover .cp-field{display:flex;flex-direction:column;gap:4px}
+.contracts-popover .cp-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--up-muted)}
+.contracts-popover .cp-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+.contracts-table thead th{position:relative;white-space:nowrap}
+.contracts-th{display:inline-flex;align-items:center;gap:6px}
+.th-menu-btn{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,.75);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);opacity:.75;transition:all .14s}
+.th-menu-btn:hover{opacity:1;background:rgba(255,255,255,.18);color:#fff}
+.contracts-popover .cp-sort-list{display:grid;gap:6px}
+.contracts-popover .cp-sort-btn{display:flex;justify-content:space-between;align-items:center;width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--up-border);background:#fff;font-size:12px;font-weight:700;color:var(--up-dark)}
+.contracts-popover .cp-sort-btn:hover,.contracts-popover .cp-sort-btn.on{border-color:var(--up-orange);background:#FFF3E6;color:var(--up-orange)}
+.contracts-meta-note{font-size:10px;color:var(--up-muted);margin-top:6px;line-height:1.35}
+@media (max-width:900px){.contracts-toolbar{align-items:stretch}.contracts-search{max-width:none}.contracts-toolbar-actions{width:100%}.contracts-toolbar-actions .btn{flex:1 1 140px;justify-content:center}.contracts-popover{left:12px !important;right:12px !important;width:auto;min-width:auto;max-width:none}}
+
 </style>
 </head>
 <body class="auth-locked">
@@ -533,7 +565,7 @@ body.auth-locked .auth-screen{display:flex}
     <span class="upd-txt" id="upd-txt">—</span>
     <span class="user-chip" id="user-chip"><span id="user-chip-name">—</span><span class="role" id="user-chip-role">—</span></span>
     <button class="btn btn-ghost btn-sm role-gestor-only" id="btn-exportar-top" onclick="exportar()">⬇ Exportar</button>
-    <button class="btn btn-primary role-contract-create" id="btn-top-novo-contrato" onclick="abrirNovoContrato()">+ Novo Contrato</button>
+    <button class="btn btn-primary role-contract-create" id="btn-top-novo-contrato" onclick="show_ov('ov-contrato')">+ Novo Contrato</button>
     <button class="btn btn-ghost btn-sm" id="btn-logout" onclick="logout()" style="display:none">Sair</button>
   </div>
 </header>
@@ -556,7 +588,7 @@ body.auth-locked .auth-screen{display:flex}
     <div class="kpi" style="border-top-color:var(--ok-green)"><div class="lbl">Ações Concluídas</div><div class="val" id="k7v" style="color:var(--ok-green)">0</div><div class="sub" id="k7s">0% do total</div></div>
   </div>
   <div class="g2" style="gap:15px;margin-bottom:15px">
-    <div class="card"><div class="ch"><div class="ch-ttl">Últimos Contratos</div><button class="btn btn-ghost btn-xs" data-go="contratos" onclick="goPage('contratos')">Ver todos →</button></div><div id="dash-contratos"><div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="abrirNovoContrato()">+ Adicionar</button></div></div></div>
+    <div class="card"><div class="ch"><div class="ch-ttl">Últimos Contratos</div><button class="btn btn-ghost btn-xs" data-go="contratos" onclick="goPage('contratos')">Ver todos →</button></div><div id="dash-contratos"><div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div></div></div>
     <div class="card"><div class="ch"><div class="ch-ttl">Top 20 · VGV por Condomínio</div><button class="btn btn-ghost btn-xs" data-go="relatorios" onclick="goPage('relatorios')">Relatórios →</button></div><div class="cb" id="dash-top20"></div></div>
   </div>
   <div class="g2" style="gap:15px">
@@ -625,49 +657,48 @@ body.auth-locked .auth-screen{display:flex}
 <!-- CONTRATOS -->
 <div class="page" id="page-contratos">
   <div class="sh">
-    <div class="sh-l"><div class="ttl">Contratos / Escrituras</div><div class="sub">Campos obrigatórios marcados com ★</div></div>
-    <div class="sh-r" style="gap:8px;flex-wrap:wrap">
-      <input class="fi" style="width:260px;padding:6px 10px" placeholder="Busca rápida por cadastro, lote, condomínio, setor, pagamento ou observação..." id="busca-c" oninput="renderContratos()">
-      <button class="btn btn-primary role-contract-create" onclick="abrirNovoContrato()">+ Novo Contrato</button>
-    </div>
+    <div class="sh-l"><div class="ttl">Contratos / Escrituras</div><div class="sub">Consulta, filtros e edição dos contratos cadastrados</div></div>
   </div>
+  <div class="card" style="margin-bottom:14px"><div class="cb" style="padding:12px 14px">
+    <div class="contracts-toolbar">
+      <div class="contracts-search">
+        <input class="fi" id="busca-c" placeholder="Buscar por lote, condomínio, setor, pagamento, status ou observação..." oninput="syncContratoSearch()">
+      </div>
+      <div class="contracts-toolbar-actions">
+        <button class="btn btn-ghost btn-sm contracts-tool-btn" type="button" onclick="toggleContratoPopover('filters',event)">Filtros <span class="contracts-caret">▾</span></button>
+        <button class="btn btn-ghost btn-sm contracts-tool-btn" type="button" onclick="toggleContratoPopover('sort',event)">Ordenar <span class="contracts-caret">▾</span></button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="limparFiltrosContratos()">Limpar</button>
+        <button class="btn btn-primary role-contract-create" type="button" onclick="abrirNovoContrato()">+ Novo Contrato</button>
+      </div>
+    </div>
+    <div id="contratos-chip-row" class="contracts-chip-row"></div>
+  </div></div>
+
   <div class="kpi-row" style="margin-bottom:15px">
     <div class="kpi kp-g"><div class="lbl">Contratos</div><div class="val" id="c-total">0</div><div class="sub">Total</div></div>
     <div class="kpi kp-o"><div class="lbl">Receita Total</div><div class="val" id="c-receita">R$ 0</div><div class="sub">Valor final</div></div>
     <div class="kpi kp-d"><div class="lbl">Ticket Médio</div><div class="val" id="c-ticket">—</div><div class="sub">Por escritura</div></div>
     <div class="kpi"><div class="lbl">À Vista</div><div class="val" id="c-avista">0</div><div class="sub">Contratos à vista</div></div>
   </div>
-  <div class="card"><div class="tw"><table>
-    <thead>
-      <tr><th>#</th><th>Lote ★</th><th>Condomínio ★</th><th>Setor</th><th>Área</th><th>Valor Original</th><th>Desconto</th><th>Valor Final ★</th><th>Pagamento ★</th><th>Status</th><th>Data</th><th>Ações</th></tr>
-      <tr>
-        <th><input class="fi" id="f-num-c" placeholder="Nº" style="width:70px;padding:5px 8px" oninput="renderContratos()"></th>
-        <th><input class="fi" id="f-lote-c" placeholder="Filtrar lote" style="width:120px;padding:5px 8px" oninput="renderContratos()"></th>
-        <th><select class="fs" id="f-condo-c" style="width:190px;padding:5px 8px" onchange="renderContratos()"><option value="">Todos</option></select></th>
-        <th><select class="fs" id="f-setor-c" style="width:110px;padding:5px 8px" onchange="renderContratos()"><option value="">Todos</option></select></th>
-        <th></th>
-        <th></th>
-        <th></th>
-        <th><select class="fs" id="ordem-c" style="width:190px;padding:5px 8px" onchange="renderContratos()">
-          <option value="cad_desc">Cadastro mais recente</option>
-          <option value="cad_asc">Cadastro mais antigo</option>
-          <option value="data_desc">Data mais recente</option>
-          <option value="data_asc">Data mais antiga</option>
-          <option value="lote_az">Lote A → Z</option>
-          <option value="lote_za">Lote Z → A</option>
-          <option value="condo_az">Condomínio A → Z</option>
-          <option value="condo_za">Condomínio Z → A</option>
-          <option value="valor_asc">Menor valor → maior</option>
-          <option value="valor_desc">Maior valor → menor</option>
-        </select></th>
-        <th><input class="fi" id="f-pagto-c" placeholder="Pagamento" style="width:120px;padding:5px 8px" oninput="renderContratos()"></th>
-        <th><select class="fs" id="f-status-c" style="width:150px;padding:5px 8px" onchange="renderContratos()"><option value="">Todos</option></select></th>
-        <th></th>
-        <th><button class="btn btn-ghost btn-xs" type="button" onclick="limparFiltrosContratos()">Limpar</button></th>
-      </tr>
-    </thead>
+
+  <div class="card"><div class="tw"><table class="contracts-table">
+    <thead><tr>
+      <th><span class="contracts-th"># <button class="th-menu-btn" type="button" onclick="openContratoColumnMenu('cadastro',event)">▾</button></span></th>
+      <th><span class="contracts-th">Lote <button class="th-menu-btn" type="button" onclick="openContratoColumnMenu('lote',event)">▾</button></span></th>
+      <th><span class="contracts-th">Condomínio <button class="th-menu-btn" type="button" onclick="openContratoColumnMenu('condo',event)">▾</button></span></th>
+      <th><span class="contracts-th">Setor <button class="th-menu-btn" type="button" onclick="openContratoColumnMenu('setor',event)">▾</button></span></th>
+      <th>Área</th>
+      <th>Valor Original</th>
+      <th>Desconto</th>
+      <th><span class="contracts-th">Valor Final <button class="th-menu-btn" type="button" onclick="openContratoColumnMenu('valor',event)">▾</button></span></th>
+      <th>Pagamento</th>
+      <th><span class="contracts-th">Status <button class="th-menu-btn" type="button" onclick="openContratoColumnMenu('status',event)">▾</button></span></th>
+      <th><span class="contracts-th">Data <button class="th-menu-btn" type="button" onclick="openContratoColumnMenu('data',event)">▾</button></span></th>
+      <th>Ações</th>
+    </tr></thead>
     <tbody id="contratos-tbody"></tbody>
   </table></div></div>
+  <div id="contratos-popover" class="contracts-popover"></div>
 </div>
 
 <!-- RELATÓRIOS -->
@@ -1567,6 +1598,7 @@ const normalizeContratos=()=>{
       tipo:pickField(c,['tipo','Tipo'])||'Não Aderente',
       status:pickField(c,['status','Status'])||'CP (Contrato de Compra e Venda)',
       data:data||'',
+      nParc:pickField(c,['nParc','nparc','n_parc','n parcelas','parcelas']),
       obs:pickField(c,['obs','Observações','Observacao','Observação'])
     };
   });
@@ -1768,7 +1800,7 @@ function renderDashboard(){
   document.getElementById('dash-orc').innerHTML=S.categorias.map(c=>{const r=gastoPorCat[c.nome]||0;const orc=num(c.orc||orcPorCat[c.nome]||0);const p=orc?pct(r,orc):0;return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:700">${c.nome}</span><span style="color:var(--up-muted)">${BRL(r)} / ${BRL(orc)}</span></div><div style="height:5px;background:var(--up-border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(p,100)}%;background:var(--up-teal);border-radius:3px;transition:width .8s"></div></div></div>`;}).join('')||'<div class="empty" style="padding:12px">Sem categorias.</div>';
   // últimos contratos
   const elC=document.getElementById('dash-contratos');
-  if(!S.contratos.length){elC.innerHTML=`<div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="abrirNovoContrato()">+ Adicionar</button></div>`;}
+  if(!S.contratos.length){elC.innerHTML=`<div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div>`;}
   else{
     const rows=[...S.contratos].reverse().slice(0,20).map(c=>`<tr><td style="font-weight:700">${c.lote||'—'}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-weight:800">${BRL(c.valorFinal||c.valor)}</td><td>${badge(c.status)}</td></tr>`).join('');
     elC.innerHTML=`<table><thead><tr><th>Lote</th><th>Condomínio</th><th>Setor</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -1963,88 +1995,257 @@ function deletarMidia(i){
 }
 
 // ═══ CONTRATOS ═══
-function popularFiltrosContratos(){
-  const condoSel=document.getElementById('f-condo-c');
-  const setorSel=document.getElementById('f-setor-c');
-  const statusSel=document.getElementById('f-status-c');
-  if(!condoSel||!setorSel||!statusSel)return;
-  const condoAtual=condoSel.value, setorAtual=setorSel.value, statusAtual=statusSel.value;
-  const condos=[...new Set(S.contratos.map(c=>getCondoNome(c)).filter(v=>v&&v!=='—'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-  const setores=[...new Set(S.contratos.map(c=>String(c.setor||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-  const status=[...new Set(S.contratos.map(c=>String(c.status||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-  condoSel.innerHTML='<option value="">Todos</option>'+condos.map(v=>`<option ${v===condoAtual?'selected':''}>${v}</option>`).join('');
-  setorSel.innerHTML='<option value="">Todos</option>'+setores.map(v=>`<option ${v===setorAtual?'selected':''}>${v}</option>`).join('');
-  statusSel.innerHTML='<option value="">Todos</option>'+status.map(v=>`<option ${v===statusAtual?'selected':''}>${v}</option>`).join('');
+const CONTRACT_VIEW={search:'',num:'',lote:'',condo:'',setor:'',status:'',minValor:'',maxValor:'',sort:'cad_desc'};
+let CONTRACT_POPOVER_MODE='';
+let CONTRACT_POPOVER_FIELD='';
+
+function getContratoRows(){
+  return [...S.contratos].map((c,i)=>({
+    c,
+    i,
+    condo:getCondoNome(c),
+    valorOriginal:num(c.valor||0),
+    valorFinal:num(c.valorFinal||c.valor||0)
+  }));
 }
-function limparFiltrosContratos(){
-  ['busca-c','f-num-c','f-lote-c','f-pagto-c'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  ['f-condo-c','f-setor-c','f-status-c'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const ord=document.getElementById('ordem-c'); if(ord) ord.value='cad_desc';
+function getContratoDistinct(field){
+  return [...new Set(getContratoRows().map(r=>String(r[field]||r.c[field]||'').trim()).filter(v=>v&&v!=='—'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+}
+function getContratoDateValue(v){
+  const iso=parseSheetDate(v);
+  if(iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  if(typeof v==='string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  if(typeof v==='string' && /^\d{2}\/\d{2}\/\d{4}$/.test(v)){
+    const [d,m,y]=v.split('/');
+    return `${y}-${m}-${d}`;
+  }
+  return '';
+}
+function getContratoSortLabel(key){
+  return {
+    cad_desc:'Cadastro mais recente',cad_asc:'Cadastro mais antigo',
+    lote_asc:'Lote A → Z',lote_desc:'Lote Z → A',
+    condo_asc:'Condomínio A → Z',condo_desc:'Condomínio Z → A',
+    valor_asc:'Menor valor → maior',valor_desc:'Maior valor → menor',
+    data_desc:'Data mais recente',data_asc:'Data mais antiga'
+  }[key]||'Ordenação';
+}
+function syncContratoSearch(){
+  CONTRACT_VIEW.search=(document.getElementById('busca-c')?.value||'').trim();
   renderContratos();
 }
-function renderContratos(){
-  popularFiltrosContratos();
-  const busca=(document.getElementById('busca-c')?.value||'').toLowerCase().trim();
-  const filtroNum=(document.getElementById('f-num-c')?.value||'').trim();
-  const filtroLote=(document.getElementById('f-lote-c')?.value||'').toLowerCase().trim();
-  const filtroCondo=(document.getElementById('f-condo-c')?.value||'').trim();
-  const filtroSetor=(document.getElementById('f-setor-c')?.value||'').trim();
-  const filtroPagto=(document.getElementById('f-pagto-c')?.value||'').toLowerCase().trim();
-  const filtroStatus=(document.getElementById('f-status-c')?.value||'').trim();
-  const ordem=(document.getElementById('ordem-c')?.value||'cad_desc');
+function limparFiltrosContratos(){
+  Object.assign(CONTRACT_VIEW,{search:(document.getElementById('busca-c')?.value||'').trim(),num:'',lote:'',condo:'',setor:'',status:'',minValor:'',maxValor:'',sort:'cad_desc'});
+  renderContratos();
+  closeContratoPopover();
+}
+function removeContratoChip(field){
+  if(field==='search'){CONTRACT_VIEW.search='';const el=document.getElementById('busca-c'); if(el)el.value='';}
+  else if(field==='valor'){CONTRACT_VIEW.minValor='';CONTRACT_VIEW.maxValor='';}
+  else CONTRACT_VIEW[field]='';
+  renderContratos();
+}
+function getContratoFilteredData(){
+  const busca=String(CONTRACT_VIEW.search||'').toLowerCase();
+  const filtroNum=String(CONTRACT_VIEW.num||'').trim();
+  const filtroLote=String(CONTRACT_VIEW.lote||'').toLowerCase().trim();
+  const filtroCondo=String(CONTRACT_VIEW.condo||'').trim();
+  const filtroSetor=String(CONTRACT_VIEW.setor||'').trim();
+  const filtroStatus=String(CONTRACT_VIEW.status||'').trim();
+  const minValor=num(CONTRACT_VIEW.minValor||0);
+  const maxValor=num(CONTRACT_VIEW.maxValor||0);
 
-  let data=[...S.contratos].filter(c=>{
-    const ri=S.contratos.indexOf(c)+1;
-    const condo=getCondoNome(c);
-    const hay=[ri,c.lote,c.setor,condo,c.pagto,c.status,c.tipo,c.obs].map(v=>String(v||'').toLowerCase());
+  let rows=getContratoRows().filter(r=>{
+    const hay=[r.i+1,r.c.lote,r.c.setor,r.condo,r.c.pagto,r.c.status,r.c.tipo,r.c.obs].map(v=>String(v||'').toLowerCase());
     const okBusca=!busca || hay.some(v=>v.includes(busca));
-    const okNum=!filtroNum || String(ri).includes(filtroNum);
-    const okLote=!filtroLote || String(c.lote||'').toLowerCase().includes(filtroLote);
-    const okCondo=!filtroCondo || condo===filtroCondo;
-    const okSetor=!filtroSetor || String(c.setor||'').trim()===filtroSetor;
-    const okPagto=!filtroPagto || String(c.pagto||'').toLowerCase().includes(filtroPagto);
-    const okStatus=!filtroStatus || String(c.status||'').trim()===filtroStatus;
-    return okBusca && okNum && okLote && okCondo && okSetor && okPagto && okStatus;
+    const okNum=!filtroNum || String(r.i+1).includes(filtroNum);
+    const okLote=!filtroLote || String(r.c.lote||'').toLowerCase().includes(filtroLote);
+    const okCondo=!filtroCondo || r.condo===filtroCondo;
+    const okSetor=!filtroSetor || String(r.c.setor||'').trim()===filtroSetor;
+    const okStatus=!filtroStatus || String(r.c.status||'').trim()===filtroStatus;
+    const okMin=!minValor || r.valorFinal>=minValor;
+    const okMax=!maxValor || r.valorFinal<=maxValor;
+    return okBusca&&okNum&&okLote&&okCondo&&okSetor&&okStatus&&okMin&&okMax;
   });
 
-  const byCad=(c)=>S.contratos.indexOf(c)+1;
-  const byDate=(c)=>{const d=parseSheetDate(c.data);return d?new Date(d+'T00:00:00').getTime():0;};
-  const byLote=(c)=>String(c.lote||'').toLowerCase();
-  const byCondo=(c)=>String(getCondoNome(c)||'').toLowerCase();
-  const byValor=(c)=>num(c.valorFinal||c.valor||0);
-
-  data.sort((a,b)=>{
-    if(ordem==='cad_asc') return byCad(a)-byCad(b);
-    if(ordem==='cad_desc') return byCad(b)-byCad(a);
-    if(ordem==='lote_az') return byLote(a).localeCompare(byLote(b),'pt-BR',{numeric:true});
-    if(ordem==='lote_za') return byLote(b).localeCompare(byLote(a),'pt-BR',{numeric:true});
-    if(ordem==='condo_az') return byCondo(a).localeCompare(byCondo(b),'pt-BR');
-    if(ordem==='condo_za') return byCondo(b).localeCompare(byCondo(a),'pt-BR');
-    if(ordem==='valor_asc') return byValor(a)-byValor(b);
-    if(ordem==='valor_desc') return byValor(b)-byValor(a);
-    if(ordem==='data_asc') return byDate(a)-byDate(b);
-    return byDate(b)-byDate(a);
+  rows.sort((a,b)=>{
+    switch(CONTRACT_VIEW.sort){
+      case 'cad_asc': return a.i-b.i;
+      case 'lote_asc': return String(a.c.lote||'').localeCompare(String(b.c.lote||''),'pt-BR',{numeric:true,sensitivity:'base'});
+      case 'lote_desc': return String(b.c.lote||'').localeCompare(String(a.c.lote||''),'pt-BR',{numeric:true,sensitivity:'base'});
+      case 'condo_asc': return String(a.condo||'').localeCompare(String(b.condo||''),'pt-BR',{sensitivity:'base'});
+      case 'condo_desc': return String(b.condo||'').localeCompare(String(a.condo||''),'pt-BR',{sensitivity:'base'});
+      case 'valor_asc': return a.valorFinal-b.valorFinal;
+      case 'valor_desc': return b.valorFinal-a.valorFinal;
+      case 'data_asc': return String(getContratoDateValue(a.c.data)).localeCompare(String(getContratoDateValue(b.c.data)));
+      case 'data_desc': return String(getContratoDateValue(b.c.data)).localeCompare(String(getContratoDateValue(a.c.data)));
+      case 'cad_desc':
+      default: return b.i-a.i;
+    }
   });
-
+  return rows;
+}
+function renderContratoChips(){
+  const wrap=document.getElementById('contratos-chip-row');
+  if(!wrap)return;
+  const chips=[];
+  if(CONTRACT_VIEW.search)chips.push({field:'search',label:`Busca: ${CONTRACT_VIEW.search}`});
+  if(CONTRACT_VIEW.num)chips.push({field:'num',label:`Cadastro: ${CONTRACT_VIEW.num}`});
+  if(CONTRACT_VIEW.lote)chips.push({field:'lote',label:`Lote: ${CONTRACT_VIEW.lote}`});
+  if(CONTRACT_VIEW.condo)chips.push({field:'condo',label:`Condomínio: ${CONTRACT_VIEW.condo}`});
+  if(CONTRACT_VIEW.setor)chips.push({field:'setor',label:`Setor: ${CONTRACT_VIEW.setor}`});
+  if(CONTRACT_VIEW.status)chips.push({field:'status',label:`Status: ${CONTRACT_VIEW.status}`});
+  if(CONTRACT_VIEW.minValor||CONTRACT_VIEW.maxValor){
+    const rot=[CONTRACT_VIEW.minValor?`mín. ${BRL(CONTRACT_VIEW.minValor)}`:'',CONTRACT_VIEW.maxValor?`máx. ${BRL(CONTRACT_VIEW.maxValor)}`:''].filter(Boolean).join(' · ');
+    chips.push({field:'valor',label:`Valor: ${rot}`});
+  }
+  if(CONTRACT_VIEW.sort!=='cad_desc')chips.push({field:'sort',label:`Ordenação: ${getContratoSortLabel(CONTRACT_VIEW.sort)}`});
+  wrap.innerHTML=chips.length?chips.map(ch=>`<span class="contracts-chip">${ch.label}${ch.field==='sort'?'':`<button type="button" onclick="removeContratoChip('${ch.field}')">×</button>`}</span>`).join(''):'';
+}
+function renderContratos(){
+  const data=getContratoFilteredData();
   const totC=S.contratos.length,recC=totalReceita(),av=S.contratos.filter(c=>(c.pagto||'').toLowerCase().includes('vista')).length;
-  document.getElementById('c-total').textContent=totC;document.getElementById('c-receita').textContent=BRL(recC);document.getElementById('c-ticket').textContent=totC?BRL(recC/totC):'—';document.getElementById('c-avista').textContent=av;
-  document.getElementById('contratos-tbody').innerHTML=data.length?data.map(c=>{
-    const ri=S.contratos.indexOf(c);const vO=num(c.valor||0),vF=num(c.valorFinal||c.valor||0);const desc=vO&&vF&&vF<vO?BRL(vO-vF)+' ('+fmtPct((1-vF/vO)*100)+')':'—';
-    return`<tr><td style="color:var(--up-muted);font-size:11px">${ri+1}</td><td style="font-weight:700">${c.lote||'—'}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${num(c.area)?num(c.area).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' m²':'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td style="white-space:nowrap">${iconBtn('Editar','edit',`editarContrato(${ri})`)} ${iconBtn('Excluir','del',`deletarContrato(${ri})`)}</td></tr>`;
-  }).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca||filtroNum||filtroLote||filtroCondo||filtroSetor||filtroPagto||filtroStatus?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="abrirNovoContrato()">+ Adicionar</button></div></td></tr>`;
+  document.getElementById('c-total').textContent=totC;
+  document.getElementById('c-receita').textContent=BRL(recC);
+  document.getElementById('c-ticket').textContent=totC?BRL(recC/totC):'—';
+  document.getElementById('c-avista').textContent=av;
+  renderContratoChips();
+  document.getElementById('contratos-tbody').innerHTML=data.length?data.map(r=>{
+    const c=r.c;const vO=r.valorOriginal,vF=r.valorFinal;const desc=vO&&vF&&vF<vO?BRL(vO-vF)+' ('+fmtPct((1-vF/vO)*100)+')':'—';
+    const actions=canManageContracts()?`${iconBtn('Editar','edit',`editarContrato(${r.i})`)}${iconBtn('Excluir','del',`deletarContrato(${r.i})`)}`:'—';
+    return `<tr><td style="color:var(--up-muted);font-size:11px">${r.i+1}</td><td style="font-weight:700">${c.lote||'—'}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${r.condo}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${num(c.area)?num(c.area).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' m²':'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td style="white-space:nowrap">${actions}</td></tr>`;
+  }).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${CONTRACT_VIEW.search||CONTRACT_VIEW.num||CONTRACT_VIEW.lote||CONTRACT_VIEW.condo||CONTRACT_VIEW.setor||CONTRACT_VIEW.status||CONTRACT_VIEW.minValor||CONTRACT_VIEW.maxValor?'Nenhum resultado para os filtros aplicados.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="abrirNovoContrato()">+ Adicionar</button></div></td></tr>`;
   if(typeof applyRoleUI==='function')applyRoleUI();
 }
-function deletarContrato(i){if(!confirm('Remover?'))return;S.contratos.splice(i,1);saveS();renderContratos();renderDashboard();renderRelatorios();toast('Removido');}
+function getContratoCondoOptions(){
+  return getContratoRows().map(r=>r.condo).filter(v=>v&&v!=='—').filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+}
+function getContratoSetorOptions(){
+  return getContratoDistinct('setor');
+}
+function getContratoStatusOptions(){
+  return getContratoDistinct('status');
+}
+function positionContratoPopover(evt){
+  const pop=document.getElementById('contratos-popover'); if(!pop||!evt)return;
+  const rect=evt.currentTarget.getBoundingClientRect();
+  const width=Math.min(Math.max(pop.offsetWidth||300,280),340);
+  let left=rect.left;
+  let top=rect.bottom+8;
+  if(left+width>window.innerWidth-12) left=window.innerWidth-width-12;
+  if(left<12) left=12;
+  pop.style.left=left+'px';
+  pop.style.top=top+'px';
+}
+function closeContratoPopover(){
+  const pop=document.getElementById('contratos-popover');
+  if(pop){pop.classList.remove('on');pop.innerHTML='';}
+  CONTRACT_POPOVER_MODE='';CONTRACT_POPOVER_FIELD='';
+}
+function toggleContratoPopover(mode,evt){
+  if(CONTRACT_POPOVER_MODE===mode && document.getElementById('contratos-popover')?.classList.contains('on')){closeContratoPopover();return;}
+  CONTRACT_POPOVER_MODE=mode; CONTRACT_POPOVER_FIELD='';
+  renderContratoPopover();
+  const pop=document.getElementById('contratos-popover');
+  pop.classList.add('on');
+  positionContratoPopover(evt);
+}
+function openContratoColumnMenu(field,evt){
+  CONTRACT_POPOVER_MODE='column'; CONTRACT_POPOVER_FIELD=field;
+  renderContratoPopover();
+  const pop=document.getElementById('contratos-popover');
+  pop.classList.add('on');
+  positionContratoPopover(evt);
+}
+function renderContratoPopover(){
+  const pop=document.getElementById('contratos-popover'); if(!pop)return;
+  const condos=getContratoCondoOptions();
+  const setores=getContratoSetorOptions();
+  const status=getContratoStatusOptions();
+  const opt=(arr,cur)=>'<option value="">Todos</option>'+arr.map(v=>`<option value="${String(v).replace(/"/g,'&quot;')}" ${v===cur?'selected':''}>${v}</option>`).join('');
+  const sortButtons=(pairs)=>`<div class="cp-sort-list">${pairs.map(([val,label])=>`<button type="button" class="cp-sort-btn ${CONTRACT_VIEW.sort===val?'on':''}" onclick="setContratoSort('${val}')"><span>${label}</span><span>▾</span></button>`).join('')}</div>`;
+  if(CONTRACT_POPOVER_MODE==='sort'){
+    pop.innerHTML=`<div class="cp-hd"><div class="cp-ttl">Ordenar contratos</div><button class="cp-close" type="button" onclick="closeContratoPopover()">×</button></div>${sortButtons([
+      ['cad_desc','Cadastro mais recente'],['cad_asc','Cadastro mais antigo'],['lote_asc','Lote A → Z'],['lote_desc','Lote Z → A'],['condo_asc','Condomínio A → Z'],['condo_desc','Condomínio Z → A'],['valor_asc','Menor valor → maior'],['valor_desc','Maior valor → menor'],['data_desc','Data mais recente'],['data_asc','Data mais antiga']
+    ])}`;
+    return;
+  }
+  if(CONTRACT_POPOVER_MODE==='filters'){
+    pop.innerHTML=`<div class="cp-hd"><div class="cp-ttl">Filtros avançados</div><button class="cp-close" type="button" onclick="closeContratoPopover()">×</button></div>
+      <div class="cp-grid c2">
+        <div class="cp-field"><div class="cp-label">Cadastro</div><input class="fi" id="cp-num" value="${CONTRACT_VIEW.num||''}" placeholder="Ex.: 12"></div>
+        <div class="cp-field"><div class="cp-label">Lote</div><input class="fi" id="cp-lote" value="${CONTRACT_VIEW.lote||''}" placeholder="Ex.: B 30"></div>
+      </div>
+      <div class="cp-grid c2">
+        <div class="cp-field"><div class="cp-label">Condomínio</div><select class="fs" id="cp-condo">${opt(condos,CONTRACT_VIEW.condo)}</select></div>
+        <div class="cp-field"><div class="cp-label">Setor</div><select class="fs" id="cp-setor">${opt(setores,CONTRACT_VIEW.setor)}</select></div>
+      </div>
+      <div class="cp-grid c2">
+        <div class="cp-field"><div class="cp-label">Status</div><select class="fs" id="cp-status">${opt(status,CONTRACT_VIEW.status)}</select></div>
+        <div class="cp-field"><div class="cp-label">Ordenação</div><select class="fs" id="cp-sort"><option value="cad_desc">Cadastro mais recente</option><option value="cad_asc">Cadastro mais antigo</option><option value="lote_asc">Lote A → Z</option><option value="lote_desc">Lote Z → A</option><option value="condo_asc">Condomínio A → Z</option><option value="condo_desc">Condomínio Z → A</option><option value="valor_asc">Menor valor → maior</option><option value="valor_desc">Maior valor → menor</option><option value="data_desc">Data mais recente</option><option value="data_asc">Data mais antiga</option></select></div>
+      </div>
+      <div class="cp-grid c2">
+        <div class="cp-field"><div class="cp-label">Valor mínimo</div><input class="fi" type="number" id="cp-minv" value="${CONTRACT_VIEW.minValor||''}" placeholder="0"></div>
+        <div class="cp-field"><div class="cp-label">Valor máximo</div><input class="fi" type="number" id="cp-maxv" value="${CONTRACT_VIEW.maxValor||''}" placeholder="0"></div>
+      </div>
+      <div class="cp-actions"><button class="btn btn-ghost btn-sm" type="button" onclick="limparFiltrosContratos()">Limpar tudo</button><button class="btn btn-primary btn-sm" type="button" onclick="applyContratoFilterPopover()">Aplicar</button></div>`;
+    const sortSel=pop.querySelector('#cp-sort'); if(sortSel) sortSel.value=CONTRACT_VIEW.sort||'cad_desc';
+    return;
+  }
+  const field=CONTRACT_POPOVER_FIELD;
+  let body='';
+  if(field==='cadastro') body=`<div class="cp-field"><div class="cp-label">Número de cadastro</div><input class="fi" id="cp-col-num" value="${CONTRACT_VIEW.num||''}" placeholder="Ex.: 12"></div><div class="cp-actions" style="justify-content:space-between"><button class="btn btn-ghost btn-sm" type="button" onclick="clearContratoField('num')">Limpar</button><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" type="button" onclick="setContratoSort('cad_desc')">Mais recente</button><button class="btn btn-primary btn-sm" type="button" onclick="applyContratoColumnValue('cadastro')">Aplicar</button></div></div>`;
+  if(field==='lote') body=`<div class="cp-field"><div class="cp-label">Lote</div><input class="fi" id="cp-col-lote" value="${CONTRACT_VIEW.lote||''}" placeholder="Ex.: B 30"></div><div class="cp-sort-list" style="margin-top:10px">${[['lote_asc','Ordenar A → Z'],['lote_desc','Ordenar Z → A']].map(([val,label])=>`<button type="button" class="cp-sort-btn ${CONTRACT_VIEW.sort===val?'on':''}" onclick="setContratoSort('${val}')"><span>${label}</span><span>▾</span></button>`).join('')}</div><div class="cp-actions"><button class="btn btn-ghost btn-sm" type="button" onclick="clearContratoField('lote')">Limpar</button><button class="btn btn-primary btn-sm" type="button" onclick="applyContratoColumnValue('lote')">Aplicar</button></div>`;
+  if(field==='condo') body=`<div class="cp-field"><div class="cp-label">Condomínio</div><select class="fs" id="cp-col-condo">${opt(condos,CONTRACT_VIEW.condo)}</select></div><div class="cp-sort-list" style="margin-top:10px">${[['condo_asc','Ordenar A → Z'],['condo_desc','Ordenar Z → A']].map(([val,label])=>`<button type="button" class="cp-sort-btn ${CONTRACT_VIEW.sort===val?'on':''}" onclick="setContratoSort('${val}')"><span>${label}</span><span>▾</span></button>`).join('')}</div><div class="cp-actions"><button class="btn btn-ghost btn-sm" type="button" onclick="clearContratoField('condo')">Limpar</button><button class="btn btn-primary btn-sm" type="button" onclick="applyContratoColumnValue('condo')">Aplicar</button></div>`;
+  if(field==='setor') body=`<div class="cp-field"><div class="cp-label">Setor</div><select class="fs" id="cp-col-setor">${opt(setores,CONTRACT_VIEW.setor)}</select></div><div class="cp-actions"><button class="btn btn-ghost btn-sm" type="button" onclick="clearContratoField('setor')">Limpar</button><button class="btn btn-primary btn-sm" type="button" onclick="applyContratoColumnValue('setor')">Aplicar</button></div>`;
+  if(field==='valor') body=`<div class="cp-grid c2"><div class="cp-field"><div class="cp-label">Valor mínimo</div><input class="fi" type="number" id="cp-col-minv" value="${CONTRACT_VIEW.minValor||''}" placeholder="0"></div><div class="cp-field"><div class="cp-label">Valor máximo</div><input class="fi" type="number" id="cp-col-maxv" value="${CONTRACT_VIEW.maxValor||''}" placeholder="0"></div></div><div class="cp-sort-list" style="margin-top:10px">${[['valor_asc','Menor → maior'],['valor_desc','Maior → menor']].map(([val,label])=>`<button type="button" class="cp-sort-btn ${CONTRACT_VIEW.sort===val?'on':''}" onclick="setContratoSort('${val}')"><span>${label}</span><span>▾</span></button>`).join('')}</div><div class="cp-actions"><button class="btn btn-ghost btn-sm" type="button" onclick="clearContratoField('valor')">Limpar</button><button class="btn btn-primary btn-sm" type="button" onclick="applyContratoColumnValue('valor')">Aplicar</button></div>`;
+  if(field==='status') body=`<div class="cp-field"><div class="cp-label">Status</div><select class="fs" id="cp-col-status">${opt(status,CONTRACT_VIEW.status)}</select></div><div class="cp-actions"><button class="btn btn-ghost btn-sm" type="button" onclick="clearContratoField('status')">Limpar</button><button class="btn btn-primary btn-sm" type="button" onclick="applyContratoColumnValue('status')">Aplicar</button></div>`;
+  if(field==='data') body=`${sortButtons([['data_desc','Mais recentes primeiro'],['data_asc','Mais antigas primeiro']])}<div class="contracts-meta-note">A coluna Data usa a data cadastrada no contrato para reordenar a lista.</div>`;
+  pop.innerHTML=`<div class="cp-hd"><div class="cp-ttl">${({cadastro:'Cadastro',lote:'Lote',condo:'Condomínio',setor:'Setor',valor:'Valor final',status:'Status',data:'Data'})[field]||'Coluna'}</div><button class="cp-close" type="button" onclick="closeContratoPopover()">×</button></div>${body}`;
+}
+function applyContratoFilterPopover(){
+  CONTRACT_VIEW.num=(document.getElementById('cp-num')?.value||'').trim();
+  CONTRACT_VIEW.lote=(document.getElementById('cp-lote')?.value||'').trim();
+  CONTRACT_VIEW.condo=(document.getElementById('cp-condo')?.value||'').trim();
+  CONTRACT_VIEW.setor=(document.getElementById('cp-setor')?.value||'').trim();
+  CONTRACT_VIEW.status=(document.getElementById('cp-status')?.value||'').trim();
+  CONTRACT_VIEW.minValor=(document.getElementById('cp-minv')?.value||'').trim();
+  CONTRACT_VIEW.maxValor=(document.getElementById('cp-maxv')?.value||'').trim();
+  CONTRACT_VIEW.sort=(document.getElementById('cp-sort')?.value||'cad_desc');
+  renderContratos();
+  closeContratoPopover();
+}
+function clearContratoField(field){
+  if(field==='valor'){CONTRACT_VIEW.minValor='';CONTRACT_VIEW.maxValor='';}
+  else CONTRACT_VIEW[field]='';
+  renderContratos();
+  closeContratoPopover();
+}
+function applyContratoColumnValue(field){
+  if(field==='cadastro') CONTRACT_VIEW.num=(document.getElementById('cp-col-num')?.value||'').trim();
+  if(field==='lote') CONTRACT_VIEW.lote=(document.getElementById('cp-col-lote')?.value||'').trim();
+  if(field==='condo') CONTRACT_VIEW.condo=(document.getElementById('cp-col-condo')?.value||'').trim();
+  if(field==='setor') CONTRACT_VIEW.setor=(document.getElementById('cp-col-setor')?.value||'').trim();
+  if(field==='status') CONTRACT_VIEW.status=(document.getElementById('cp-col-status')?.value||'').trim();
+  if(field==='valor'){CONTRACT_VIEW.minValor=(document.getElementById('cp-col-minv')?.value||'').trim();CONTRACT_VIEW.maxValor=(document.getElementById('cp-col-maxv')?.value||'').trim();}
+  renderContratos();
+  closeContratoPopover();
+}
+function setContratoSort(sort){
+  CONTRACT_VIEW.sort=sort;
+  renderContratos();
+  closeContratoPopover();
+}
 function resetContratoForm(){
-  const idx=document.getElementById('ov-contrato-idx'); if(idx) idx.value='-1';
-  const ttl=document.getElementById('ov-contrato-ttl'); if(ttl) ttl.textContent='+ Novo Contrato / Escritura';
-  const btn=document.getElementById('ov-contrato-save'); if(btn) btn.textContent='Salvar Contrato';
-  ['cc-lote','cc-area','cc-pm2','cc-valor','cc-obs','cc-pagto','cc-valor-final','cc-valor-parc','cc-n-parc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('cc-condo').value='';document.getElementById('cc-setor').value='';
-  document.getElementById('cc-tipo').value='Não Aderente';
-  document.getElementById('cc-status').value='Escritura';
-  document.getElementById('cc-data').value=new Date().toISOString().split('T')[0];
-  selectedCond='';
+  const idx=document.getElementById('ov-contrato-idx'); if(idx)idx.value='-1';
+  const ttl=document.getElementById('ov-contrato-ttl'); if(ttl)ttl.textContent='+ Novo Contrato / Escritura';
+  const btn=document.getElementById('ov-contrato-save'); if(btn)btn.textContent='Salvar Contrato';
+  ['cc-lote','cc-area','cc-pm2','cc-valor','cc-obs','cc-pagto','cc-valor-final','cc-n-parc','cc-valor-parc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const c=document.getElementById('cc-condo'); if(c)c.value='';
+  const s=document.getElementById('cc-setor'); if(s)s.value='';
+  const t=document.getElementById('cc-tipo'); if(t)t.value='Não Aderente';
+  const st=document.getElementById('cc-status'); if(st)st.value='Escritura';
+  const d=document.getElementById('cc-data'); if(d)d.value=new Date().toISOString().split('T')[0];
 }
 function abrirNovoContrato(){resetContratoForm();show_ov('ov-contrato');}
 function editarContrato(i){
@@ -2069,6 +2270,15 @@ function editarContrato(i){
   atualizarParcelas();
   show_ov('ov-contrato');
 }
+function deletarContrato(i){if(!confirm('Remover?'))return;S.contratos.splice(i,1);saveS();renderContratos();renderDashboard();renderRelatorios();toast('Removido');}
+document.addEventListener('click',function(e){
+  const pop=document.getElementById('contratos-popover');
+  if(!pop||!pop.classList.contains('on'))return;
+  if(pop.contains(e.target))return;
+  if(e.target.closest('.contracts-tool-btn')||e.target.closest('.th-menu-btn'))return;
+  closeContratoPopover();
+});
+
 // ═══ RELATÓRIOS ═══
 const CORES_SETOR={'CTG 1':'#F47920','CTG 2':'#2BBCB8','CTG 3':'#3E4C5E','GCL':'#1C7C4A','BVT':'#7A4A9A'};
 function renderRelatorios(){
@@ -2164,7 +2374,7 @@ function salvarContrato(){
   const valor=document.getElementById('cc-valor').value;
   const pagto=document.getElementById('cc-pagto').value;
   const valorFinal=document.getElementById('cc-valor-final').value||valor;
-  const idx=Number(document.getElementById('ov-contrato-idx').value||-1);
+  const idx=Number(document.getElementById('ov-contrato-idx')?.value||-1);
   if(!condo||!lote||!valor||!pagto){toast('Preencha os campos obrigatórios ★','err');return;}
   const registro={
     condo,
@@ -2185,10 +2395,11 @@ function salvarContrato(){
   if(idx>=0 && S.contratos[idx]) S.contratos[idx]={...S.contratos[idx],...registro};
   else S.contratos.push(registro);
   normalizeContratos();
-  saveS();hide_ov('ov-contrato');toast(idx>=0?'Contrato atualizado!':'Contrato salvo!','ok');
-  selectedCond='';
-  renderContratos();renderDashboard();renderRelatorios();
+  saveS();
+  hide_ov('ov-contrato');
+  toast(idx>=0?'Contrato atualizado!':'Contrato salvo!','ok');
   resetContratoForm();
+  renderContratos();renderDashboard();renderRelatorios();
 }
 function salvarAcao(){
   const acao=document.getElementById('ac-acao').value.trim();const inicio=document.getElementById('ac-inicio').value;
@@ -2275,7 +2486,7 @@ function show_ov(id){
   if(id==='ov-contrato'){selectedCond='';renderSimulador();}
   document.getElementById(id).classList.add('on');
 }
-function hide_ov(id){document.getElementById(id).classList.remove('on');if(id==='ov-contrato'&&typeof resetContratoForm==='function')resetContratoForm();}
+function hide_ov(id){document.getElementById(id).classList.remove('on');}
 document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('on');}));
 
 // ═══ TOAST ═══
