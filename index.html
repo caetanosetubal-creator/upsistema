@@ -533,7 +533,7 @@ body.auth-locked .auth-screen{display:flex}
     <span class="upd-txt" id="upd-txt">—</span>
     <span class="user-chip" id="user-chip"><span id="user-chip-name">—</span><span class="role" id="user-chip-role">—</span></span>
     <button class="btn btn-ghost btn-sm role-gestor-only" id="btn-exportar-top" onclick="exportar()">⬇ Exportar</button>
-    <button class="btn btn-primary role-contract-create" id="btn-top-novo-contrato" onclick="show_ov('ov-contrato')">+ Novo Contrato</button>
+    <button class="btn btn-primary role-contract-create" id="btn-top-novo-contrato" onclick="abrirNovoContrato()">+ Novo Contrato</button>
     <button class="btn btn-ghost btn-sm" id="btn-logout" onclick="logout()" style="display:none">Sair</button>
   </div>
 </header>
@@ -556,7 +556,7 @@ body.auth-locked .auth-screen{display:flex}
     <div class="kpi" style="border-top-color:var(--ok-green)"><div class="lbl">Ações Concluídas</div><div class="val" id="k7v" style="color:var(--ok-green)">0</div><div class="sub" id="k7s">0% do total</div></div>
   </div>
   <div class="g2" style="gap:15px;margin-bottom:15px">
-    <div class="card"><div class="ch"><div class="ch-ttl">Últimos Contratos</div><button class="btn btn-ghost btn-xs" data-go="contratos" onclick="goPage('contratos')">Ver todos →</button></div><div id="dash-contratos"><div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div></div></div>
+    <div class="card"><div class="ch"><div class="ch-ttl">Últimos Contratos</div><button class="btn btn-ghost btn-xs" data-go="contratos" onclick="goPage('contratos')">Ver todos →</button></div><div id="dash-contratos"><div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="abrirNovoContrato()">+ Adicionar</button></div></div></div>
     <div class="card"><div class="ch"><div class="ch-ttl">Top 20 · VGV por Condomínio</div><button class="btn btn-ghost btn-xs" data-go="relatorios" onclick="goPage('relatorios')">Relatórios →</button></div><div class="cb" id="dash-top20"></div></div>
   </div>
   <div class="g2" style="gap:15px">
@@ -626,9 +626,20 @@ body.auth-locked .auth-screen{display:flex}
 <div class="page" id="page-contratos">
   <div class="sh">
     <div class="sh-l"><div class="ttl">Contratos / Escrituras</div><div class="sub">Campos obrigatórios marcados com ★</div></div>
-    <div class="sh-r">
-      <input class="fi" style="width:210px;padding:6px 10px" placeholder="Buscar lote, condomínio ou setor..." id="busca-c" oninput="renderContratos()">
-      <button class="btn btn-primary role-contract-create" onclick="show_ov('ov-contrato')">+ Novo Contrato</button>
+    <div class="sh-r" style="gap:8px;flex-wrap:wrap">
+      <input class="fi" style="width:230px;padding:6px 10px" placeholder="Buscar lote, condomínio, setor ou pagamento..." id="busca-c" oninput="renderContratos()">
+      <select class="fs" id="f-condo-c" style="width:220px" onchange="renderContratos()"><option value="">Todos os condomínios</option></select>
+      <select class="fs" id="ordem-c" style="width:220px" onchange="renderContratos()">
+        <option value="data_desc">Mais recentes primeiro</option>
+        <option value="data_asc">Mais antigos primeiro</option>
+        <option value="lote_az">Lote A → Z</option>
+        <option value="lote_za">Lote Z → A</option>
+        <option value="condo_az">Condomínio A → Z</option>
+        <option value="condo_za">Condomínio Z → A</option>
+        <option value="valor_asc">Menor valor → maior</option>
+        <option value="valor_desc">Maior valor → menor</option>
+      </select>
+      <button class="btn btn-primary role-contract-create" onclick="abrirNovoContrato()">+ Novo Contrato</button>
     </div>
   </div>
   <div class="kpi-row" style="margin-bottom:15px">
@@ -792,7 +803,8 @@ body.auth-locked .auth-screen{display:flex}
 <!-- CONTRATO -->
 <div class="overlay" id="ov-contrato">
 <div class="modal">
-  <div class="mh"><div class="mh-ttl">+ Novo Contrato / Escritura</div><button class="mh-x" onclick="hide_ov('ov-contrato')">×</button></div>
+  <div class="mh"><div class="mh-ttl" id="ov-contrato-ttl">+ Novo Contrato / Escritura</div><button class="mh-x" onclick="hide_ov('ov-contrato')">×</button></div>
+  <input type="hidden" id="ov-contrato-idx" value="-1">
   <div class="mb">
     <div class="fsec">Dados do Imóvel</div>
     <div class="fr c3">
@@ -900,7 +912,7 @@ body.auth-locked .auth-screen{display:flex}
   </div>
   <div class="mf">
     <button class="btn btn-ghost" onclick="hide_ov('ov-contrato')">Cancelar</button>
-    <button class="btn btn-primary" onclick="salvarContrato()">Salvar Contrato</button>
+    <button class="btn btn-primary" id="ov-contrato-save" onclick="salvarContrato()">Salvar Contrato</button>
   </div>
 </div>
 </div>
@@ -1740,7 +1752,7 @@ function renderDashboard(){
   document.getElementById('dash-orc').innerHTML=S.categorias.map(c=>{const r=gastoPorCat[c.nome]||0;const orc=num(c.orc||orcPorCat[c.nome]||0);const p=orc?pct(r,orc):0;return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:700">${c.nome}</span><span style="color:var(--up-muted)">${BRL(r)} / ${BRL(orc)}</span></div><div style="height:5px;background:var(--up-border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(p,100)}%;background:var(--up-teal);border-radius:3px;transition:width .8s"></div></div></div>`;}).join('')||'<div class="empty" style="padding:12px">Sem categorias.</div>';
   // últimos contratos
   const elC=document.getElementById('dash-contratos');
-  if(!S.contratos.length){elC.innerHTML=`<div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div>`;}
+  if(!S.contratos.length){elC.innerHTML=`<div class="empty"><div class="empty-ico">📋</div>Nenhum contrato ainda.<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="abrirNovoContrato()">+ Adicionar</button></div>`;}
   else{
     const rows=[...S.contratos].reverse().slice(0,20).map(c=>`<tr><td style="font-weight:700">${c.lote||'—'}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-weight:800">${BRL(c.valorFinal||c.valor)}</td><td>${badge(c.status)}</td></tr>`).join('');
     elC.innerHTML=`<table><thead><tr><th>Lote</th><th>Condomínio</th><th>Setor</th><th>Valor</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -1937,20 +1949,86 @@ function deletarMidia(i){
 // ═══ CONTRATOS ═══
 function renderContratos(){
   const busca=(document.getElementById('busca-c').value||'').toLowerCase().trim();
-  const data=busca?S.contratos.filter(c=>
-    (c.lote||'').toLowerCase().includes(busca)||
-    (c.setor||'').toLowerCase().includes(busca)||
-    getCondoNome(c).toLowerCase().includes(busca)
-  ):S.contratos;
+  const filtroCondo=(document.getElementById('f-condo-c')?.value||'').trim();
+  const ordem=(document.getElementById('ordem-c')?.value||'data_desc').trim();
+
+  const condoSel=document.getElementById('f-condo-c');
+  if(condoSel){
+    const atual=condoSel.value;
+    const opcoes=[...new Set(S.contratos.map(c=>getCondoNome(c)).filter(Boolean).filter(v=>v!=='—'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    condoSel.innerHTML='<option value="">Todos os condomínios</option>'+opcoes.map(v=>`<option ${v===atual?'selected':''}>${v}</option>`).join('');
+  }
+
+  let data=[...S.contratos].filter(c=>{
+    const condo=getCondoNome(c);
+    const okBusca=!busca || [c.lote,c.setor,condo,c.pagto,c.status,c.tipo,c.obs].some(v=>String(v||'').toLowerCase().includes(busca));
+    const okCondo=!filtroCondo || condo===filtroCondo;
+    return okBusca && okCondo;
+  });
+
+  const byDate=(c)=>{
+    const d=parseSheetDate(c.data);
+    return d? new Date(d+'T00:00:00').getTime() : 0;
+  };
+  const byLote=(c)=>String(c.lote||'').toLowerCase();
+  const byCondo=(c)=>String(getCondoNome(c)||'').toLowerCase();
+  const byValor=(c)=>num(c.valorFinal||c.valor||0);
+
+  data.sort((a,b)=>{
+    if(ordem==='lote_az') return byLote(a).localeCompare(byLote(b),'pt-BR',{numeric:true});
+    if(ordem==='lote_za') return byLote(b).localeCompare(byLote(a),'pt-BR',{numeric:true});
+    if(ordem==='condo_az') return byCondo(a).localeCompare(byCondo(b),'pt-BR');
+    if(ordem==='condo_za') return byCondo(b).localeCompare(byCondo(a),'pt-BR');
+    if(ordem==='valor_asc') return byValor(a)-byValor(b);
+    if(ordem==='valor_desc') return byValor(b)-byValor(a);
+    if(ordem==='data_asc') return byDate(a)-byDate(b);
+    return byDate(b)-byDate(a);
+  });
+
   const totC=S.contratos.length,recC=totalReceita(),av=S.contratos.filter(c=>(c.pagto||'').toLowerCase().includes('vista')).length;
   document.getElementById('c-total').textContent=totC;document.getElementById('c-receita').textContent=BRL(recC);document.getElementById('c-ticket').textContent=totC?BRL(recC/totC):'—';document.getElementById('c-avista').textContent=av;
   document.getElementById('contratos-tbody').innerHTML=data.length?data.map(c=>{
     const ri=S.contratos.indexOf(c);const vO=num(c.valor||0),vF=num(c.valorFinal||c.valor||0);const desc=vO&&vF&&vF<vO?BRL(vO-vF)+' ('+fmtPct((1-vF/vO)*100)+')':'—';
-    return`<tr><td style="color:var(--up-muted);font-size:11px">${ri+1}</td><td style="font-weight:700">${c.lote||'—'}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${num(c.area)?num(c.area).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' m²':'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td><button class="icon-btn del" onclick="deletarContrato(${ri})"><span class="tip">Excluir</span>🗑</button></td></tr>`;
-  }).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="show_ov('ov-contrato')">+ Adicionar</button></div></td></tr>`;
+    return`<tr><td style="color:var(--up-muted);font-size:11px">${ri+1}</td><td style="font-weight:700">${c.lote||'—'}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${num(c.area)?num(c.area).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' m²':'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td style="white-space:nowrap">${iconBtn('Editar','edit',`editarContrato(${ri})`)} ${iconBtn('Excluir','del',`deletarContrato(${ri})`)}</td></tr>`;
+  }).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca||filtroCondo?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="abrirNovoContrato()">+ Adicionar</button></div></td></tr>`;
   if(typeof applyRoleUI==='function')applyRoleUI();
 }
-function deletarContrato(i){if(!confirm('Remover?'))return;S.contratos.splice(i,1);saveS();renderContratos();renderDashboard();toast('Removido');}
+function deletarContrato(i){if(!confirm('Remover?'))return;S.contratos.splice(i,1);saveS();renderContratos();renderDashboard();renderRelatorios();toast('Removido');}
+function abrirNovoContrato(){resetContratoForm();show_ov('ov-contrato');}
+function resetContratoForm(){
+  document.getElementById('ov-contrato-idx').value='-1';
+  document.getElementById('ov-contrato-ttl').textContent='+ Novo Contrato / Escritura';
+  document.getElementById('ov-contrato-save').textContent='Salvar Contrato';
+  ['cc-lote','cc-area','cc-pm2','cc-valor','cc-obs','cc-pagto','cc-valor-final','cc-valor-parc','cc-n-parc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('cc-condo').value='';document.getElementById('cc-setor').value='';
+  document.getElementById('cc-tipo').value='Não Aderente';
+  document.getElementById('cc-status').value='Escritura';
+  document.getElementById('cc-data').value=new Date().toISOString().split('T')[0];
+  selectedCond='';
+}
+function editarContrato(i){
+  const c=S.contratos[i];
+  if(!c)return;
+  document.getElementById('ov-contrato-idx').value=String(i);
+  document.getElementById('ov-contrato-ttl').textContent='Editar Contrato / Escritura';
+  document.getElementById('ov-contrato-save').textContent='Salvar Alterações';
+  document.getElementById('cc-condo').value=getCondoNome(c)==='—'?(c.condo||c.condominio||''):getCondoNome(c);
+  autoSetor();
+  document.getElementById('cc-setor').value=c.setor||document.getElementById('cc-setor').value||'';
+  document.getElementById('cc-lote').value=c.lote||'';
+  document.getElementById('cc-area').value=c.area||'';
+  document.getElementById('cc-pm2').value=num(c.pm2||0)||'';
+  document.getElementById('cc-valor').value=num(c.valor||0)||'';
+  document.getElementById('cc-pagto').value=c.pagto||'';
+  document.getElementById('cc-n-parc').value=c.nParc||c.nparc||'';
+  document.getElementById('cc-valor-final').value=num(c.valorFinal||c.valor||0)||'';
+  document.getElementById('cc-tipo').value=c.tipo||'Não Aderente';
+  document.getElementById('cc-status').value=c.status||'Escritura';
+  document.getElementById('cc-data').value=parseSheetDate(c.data)||c.data||new Date().toISOString().split('T')[0];
+  document.getElementById('cc-obs').value=c.obs||'';
+  atualizarParcelas();
+  show_ov('ov-contrato');
+}
 
 // ═══ RELATÓRIOS ═══
 const CORES_SETOR={'CTG 1':'#F47920','CTG 2':'#2BBCB8','CTG 3':'#3E4C5E','GCL':'#1C7C4A','BVT':'#7A4A9A'};
@@ -2047,8 +2125,9 @@ function salvarContrato(){
   const valor=document.getElementById('cc-valor').value;
   const pagto=document.getElementById('cc-pagto').value;
   const valorFinal=document.getElementById('cc-valor-final').value||valor;
+  const idx=Number(document.getElementById('ov-contrato-idx').value||-1);
   if(!condo||!lote||!valor||!pagto){toast('Preencha os campos obrigatórios ★','err');return;}
-  S.contratos.push({
+  const registro={
     condo,
     condominio:condo,
     setor,
@@ -2058,17 +2137,19 @@ function salvarContrato(){
     valor:Number(valor),
     valorFinal:Number(valorFinal),
     pagto,
+    nParc:document.getElementById('cc-n-parc').value,
     tipo:document.getElementById('cc-tipo').value,
     status:document.getElementById('cc-status').value,
     data:document.getElementById('cc-data').value||new Date().toISOString().split('T')[0],
     obs:document.getElementById('cc-obs').value
-  });
+  };
+  if(idx>=0 && S.contratos[idx]) S.contratos[idx]={...S.contratos[idx],...registro};
+  else S.contratos.push(registro);
   normalizeContratos();
-  saveS();hide_ov('ov-contrato');toast('Contrato salvo!','ok');
+  saveS();hide_ov('ov-contrato');toast(idx>=0?'Contrato atualizado!':'Contrato salvo!','ok');
   selectedCond='';
-  ['cc-lote','cc-area','cc-pm2','cc-valor','cc-obs','cc-pagto','cc-valor-final'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('cc-condo').value='';document.getElementById('cc-setor').value='';
   renderContratos();renderDashboard();renderRelatorios();
+  resetContratoForm();
 }
 function salvarAcao(){
   const acao=document.getElementById('ac-acao').value.trim();const inicio=document.getElementById('ac-inicio').value;
