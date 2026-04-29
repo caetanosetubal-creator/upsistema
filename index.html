@@ -627,18 +627,7 @@ body.auth-locked .auth-screen{display:flex}
   <div class="sh">
     <div class="sh-l"><div class="ttl">Contratos / Escrituras</div><div class="sub">Campos obrigatórios marcados com ★</div></div>
     <div class="sh-r" style="gap:8px;flex-wrap:wrap">
-      <input class="fi" style="width:230px;padding:6px 10px" placeholder="Buscar lote, condomínio, setor ou pagamento..." id="busca-c" oninput="renderContratos()">
-      <select class="fs" id="f-condo-c" style="width:220px" onchange="renderContratos()"><option value="">Todos os condomínios</option></select>
-      <select class="fs" id="ordem-c" style="width:220px" onchange="renderContratos()">
-        <option value="data_desc">Mais recentes primeiro</option>
-        <option value="data_asc">Mais antigos primeiro</option>
-        <option value="lote_az">Lote A → Z</option>
-        <option value="lote_za">Lote Z → A</option>
-        <option value="condo_az">Condomínio A → Z</option>
-        <option value="condo_za">Condomínio Z → A</option>
-        <option value="valor_asc">Menor valor → maior</option>
-        <option value="valor_desc">Maior valor → menor</option>
-      </select>
+      <input class="fi" style="width:260px;padding:6px 10px" placeholder="Busca rápida por cadastro, lote, condomínio, setor, pagamento ou observação..." id="busca-c" oninput="renderContratos()">
       <button class="btn btn-primary role-contract-create" onclick="abrirNovoContrato()">+ Novo Contrato</button>
     </div>
   </div>
@@ -649,7 +638,34 @@ body.auth-locked .auth-screen{display:flex}
     <div class="kpi"><div class="lbl">À Vista</div><div class="val" id="c-avista">0</div><div class="sub">Contratos à vista</div></div>
   </div>
   <div class="card"><div class="tw"><table>
-    <thead><tr><th>#</th><th>Lote ★</th><th>Condomínio ★</th><th>Setor</th><th>Área</th><th>Valor Original</th><th>Desconto</th><th>Valor Final ★</th><th>Pagamento ★</th><th>Status</th><th>Data</th><th></th></tr></thead>
+    <thead>
+      <tr><th>#</th><th>Lote ★</th><th>Condomínio ★</th><th>Setor</th><th>Área</th><th>Valor Original</th><th>Desconto</th><th>Valor Final ★</th><th>Pagamento ★</th><th>Status</th><th>Data</th><th>Ações</th></tr>
+      <tr>
+        <th><input class="fi" id="f-num-c" placeholder="Nº" style="width:70px;padding:5px 8px" oninput="renderContratos()"></th>
+        <th><input class="fi" id="f-lote-c" placeholder="Filtrar lote" style="width:120px;padding:5px 8px" oninput="renderContratos()"></th>
+        <th><select class="fs" id="f-condo-c" style="width:190px;padding:5px 8px" onchange="renderContratos()"><option value="">Todos</option></select></th>
+        <th><select class="fs" id="f-setor-c" style="width:110px;padding:5px 8px" onchange="renderContratos()"><option value="">Todos</option></select></th>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th><select class="fs" id="ordem-c" style="width:190px;padding:5px 8px" onchange="renderContratos()">
+          <option value="cad_desc">Cadastro mais recente</option>
+          <option value="cad_asc">Cadastro mais antigo</option>
+          <option value="data_desc">Data mais recente</option>
+          <option value="data_asc">Data mais antiga</option>
+          <option value="lote_az">Lote A → Z</option>
+          <option value="lote_za">Lote Z → A</option>
+          <option value="condo_az">Condomínio A → Z</option>
+          <option value="condo_za">Condomínio Z → A</option>
+          <option value="valor_asc">Menor valor → maior</option>
+          <option value="valor_desc">Maior valor → menor</option>
+        </select></th>
+        <th><input class="fi" id="f-pagto-c" placeholder="Pagamento" style="width:120px;padding:5px 8px" oninput="renderContratos()"></th>
+        <th><select class="fs" id="f-status-c" style="width:150px;padding:5px 8px" onchange="renderContratos()"><option value="">Todos</option></select></th>
+        <th></th>
+        <th><button class="btn btn-ghost btn-xs" type="button" onclick="limparFiltrosContratos()">Limpar</button></th>
+      </tr>
+    </thead>
     <tbody id="contratos-tbody"></tbody>
   </table></div></div>
 </div>
@@ -1947,34 +1963,59 @@ function deletarMidia(i){
 }
 
 // ═══ CONTRATOS ═══
-function renderContratos(){
-  const busca=(document.getElementById('busca-c').value||'').toLowerCase().trim();
-  const filtroCondo=(document.getElementById('f-condo-c')?.value||'').trim();
-  const ordem=(document.getElementById('ordem-c')?.value||'data_desc').trim();
-
+function popularFiltrosContratos(){
   const condoSel=document.getElementById('f-condo-c');
-  if(condoSel){
-    const atual=condoSel.value;
-    const opcoes=[...new Set(S.contratos.map(c=>getCondoNome(c)).filter(Boolean).filter(v=>v!=='—'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-    condoSel.innerHTML='<option value="">Todos os condomínios</option>'+opcoes.map(v=>`<option ${v===atual?'selected':''}>${v}</option>`).join('');
-  }
+  const setorSel=document.getElementById('f-setor-c');
+  const statusSel=document.getElementById('f-status-c');
+  if(!condoSel||!setorSel||!statusSel)return;
+  const condoAtual=condoSel.value, setorAtual=setorSel.value, statusAtual=statusSel.value;
+  const condos=[...new Set(S.contratos.map(c=>getCondoNome(c)).filter(v=>v&&v!=='—'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const setores=[...new Set(S.contratos.map(c=>String(c.setor||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const status=[...new Set(S.contratos.map(c=>String(c.status||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  condoSel.innerHTML='<option value="">Todos</option>'+condos.map(v=>`<option ${v===condoAtual?'selected':''}>${v}</option>`).join('');
+  setorSel.innerHTML='<option value="">Todos</option>'+setores.map(v=>`<option ${v===setorAtual?'selected':''}>${v}</option>`).join('');
+  statusSel.innerHTML='<option value="">Todos</option>'+status.map(v=>`<option ${v===statusAtual?'selected':''}>${v}</option>`).join('');
+}
+function limparFiltrosContratos(){
+  ['busca-c','f-num-c','f-lote-c','f-pagto-c'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['f-condo-c','f-setor-c','f-status-c'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const ord=document.getElementById('ordem-c'); if(ord) ord.value='cad_desc';
+  renderContratos();
+}
+function renderContratos(){
+  popularFiltrosContratos();
+  const busca=(document.getElementById('busca-c')?.value||'').toLowerCase().trim();
+  const filtroNum=(document.getElementById('f-num-c')?.value||'').trim();
+  const filtroLote=(document.getElementById('f-lote-c')?.value||'').toLowerCase().trim();
+  const filtroCondo=(document.getElementById('f-condo-c')?.value||'').trim();
+  const filtroSetor=(document.getElementById('f-setor-c')?.value||'').trim();
+  const filtroPagto=(document.getElementById('f-pagto-c')?.value||'').toLowerCase().trim();
+  const filtroStatus=(document.getElementById('f-status-c')?.value||'').trim();
+  const ordem=(document.getElementById('ordem-c')?.value||'cad_desc');
 
   let data=[...S.contratos].filter(c=>{
+    const ri=S.contratos.indexOf(c)+1;
     const condo=getCondoNome(c);
-    const okBusca=!busca || [c.lote,c.setor,condo,c.pagto,c.status,c.tipo,c.obs].some(v=>String(v||'').toLowerCase().includes(busca));
+    const hay=[ri,c.lote,c.setor,condo,c.pagto,c.status,c.tipo,c.obs].map(v=>String(v||'').toLowerCase());
+    const okBusca=!busca || hay.some(v=>v.includes(busca));
+    const okNum=!filtroNum || String(ri).includes(filtroNum);
+    const okLote=!filtroLote || String(c.lote||'').toLowerCase().includes(filtroLote);
     const okCondo=!filtroCondo || condo===filtroCondo;
-    return okBusca && okCondo;
+    const okSetor=!filtroSetor || String(c.setor||'').trim()===filtroSetor;
+    const okPagto=!filtroPagto || String(c.pagto||'').toLowerCase().includes(filtroPagto);
+    const okStatus=!filtroStatus || String(c.status||'').trim()===filtroStatus;
+    return okBusca && okNum && okLote && okCondo && okSetor && okPagto && okStatus;
   });
 
-  const byDate=(c)=>{
-    const d=parseSheetDate(c.data);
-    return d? new Date(d+'T00:00:00').getTime() : 0;
-  };
+  const byCad=(c)=>S.contratos.indexOf(c)+1;
+  const byDate=(c)=>{const d=parseSheetDate(c.data);return d?new Date(d+'T00:00:00').getTime():0;};
   const byLote=(c)=>String(c.lote||'').toLowerCase();
   const byCondo=(c)=>String(getCondoNome(c)||'').toLowerCase();
   const byValor=(c)=>num(c.valorFinal||c.valor||0);
 
   data.sort((a,b)=>{
+    if(ordem==='cad_asc') return byCad(a)-byCad(b);
+    if(ordem==='cad_desc') return byCad(b)-byCad(a);
     if(ordem==='lote_az') return byLote(a).localeCompare(byLote(b),'pt-BR',{numeric:true});
     if(ordem==='lote_za') return byLote(b).localeCompare(byLote(a),'pt-BR',{numeric:true});
     if(ordem==='condo_az') return byCondo(a).localeCompare(byCondo(b),'pt-BR');
@@ -1990,15 +2031,14 @@ function renderContratos(){
   document.getElementById('contratos-tbody').innerHTML=data.length?data.map(c=>{
     const ri=S.contratos.indexOf(c);const vO=num(c.valor||0),vF=num(c.valorFinal||c.valor||0);const desc=vO&&vF&&vF<vO?BRL(vO-vF)+' ('+fmtPct((1-vF/vO)*100)+')':'—';
     return`<tr><td style="color:var(--up-muted);font-size:11px">${ri+1}</td><td style="font-weight:700">${c.lote||'—'}</td><td style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em">${getCondoNome(c)}</td><td>${badge(c.setor||'—','b-z')}</td><td style="font-size:11px;color:var(--up-muted)">${num(c.area)?num(c.area).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' m²':'—'}</td><td style="color:var(--up-muted)">${BRL(c.valor)}</td><td style="font-size:11px;color:var(--ok-green)">${desc}</td><td style="font-weight:800;color:var(--ok-green)">${BRL(c.valorFinal||c.valor)}</td><td style="font-size:11px">${c.pagto||'—'}</td><td>${badge(c.status)}</td><td style="font-size:11px;color:var(--up-muted)">${fmtDate(c.data)}</td><td style="white-space:nowrap">${iconBtn('Editar','edit',`editarContrato(${ri})`)} ${iconBtn('Excluir','del',`deletarContrato(${ri})`)}</td></tr>`;
-  }).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca||filtroCondo?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="abrirNovoContrato()">+ Adicionar</button></div></td></tr>`;
+  }).join(''):`<tr><td colspan="12"><div class="empty"><div class="empty-ico">📋</div>${busca||filtroNum||filtroLote||filtroCondo||filtroSetor||filtroPagto||filtroStatus?'Nenhum resultado.':'Nenhum contrato.'}<br><button class="btn btn-primary btn-sm role-contract-create" style="margin-top:8px" onclick="abrirNovoContrato()">+ Adicionar</button></div></td></tr>`;
   if(typeof applyRoleUI==='function')applyRoleUI();
 }
 function deletarContrato(i){if(!confirm('Remover?'))return;S.contratos.splice(i,1);saveS();renderContratos();renderDashboard();renderRelatorios();toast('Removido');}
-function abrirNovoContrato(){resetContratoForm();show_ov('ov-contrato');}
 function resetContratoForm(){
-  document.getElementById('ov-contrato-idx').value='-1';
-  document.getElementById('ov-contrato-ttl').textContent='+ Novo Contrato / Escritura';
-  document.getElementById('ov-contrato-save').textContent='Salvar Contrato';
+  const idx=document.getElementById('ov-contrato-idx'); if(idx) idx.value='-1';
+  const ttl=document.getElementById('ov-contrato-ttl'); if(ttl) ttl.textContent='+ Novo Contrato / Escritura';
+  const btn=document.getElementById('ov-contrato-save'); if(btn) btn.textContent='Salvar Contrato';
   ['cc-lote','cc-area','cc-pm2','cc-valor','cc-obs','cc-pagto','cc-valor-final','cc-valor-parc','cc-n-parc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('cc-condo').value='';document.getElementById('cc-setor').value='';
   document.getElementById('cc-tipo').value='Não Aderente';
@@ -2006,9 +2046,9 @@ function resetContratoForm(){
   document.getElementById('cc-data').value=new Date().toISOString().split('T')[0];
   selectedCond='';
 }
+function abrirNovoContrato(){resetContratoForm();show_ov('ov-contrato');}
 function editarContrato(i){
-  const c=S.contratos[i];
-  if(!c)return;
+  const c=S.contratos[i]; if(!c)return;
   document.getElementById('ov-contrato-idx').value=String(i);
   document.getElementById('ov-contrato-ttl').textContent='Editar Contrato / Escritura';
   document.getElementById('ov-contrato-save').textContent='Salvar Alterações';
@@ -2029,7 +2069,6 @@ function editarContrato(i){
   atualizarParcelas();
   show_ov('ov-contrato');
 }
-
 // ═══ RELATÓRIOS ═══
 const CORES_SETOR={'CTG 1':'#F47920','CTG 2':'#2BBCB8','CTG 3':'#3E4C5E','GCL':'#1C7C4A','BVT':'#7A4A9A'};
 function renderRelatorios(){
@@ -2236,7 +2275,7 @@ function show_ov(id){
   if(id==='ov-contrato'){selectedCond='';renderSimulador();}
   document.getElementById(id).classList.add('on');
 }
-function hide_ov(id){document.getElementById(id).classList.remove('on');}
+function hide_ov(id){document.getElementById(id).classList.remove('on');if(id==='ov-contrato'&&typeof resetContratoForm==='function')resetContratoForm();}
 document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('on');}));
 
 // ═══ TOAST ═══
