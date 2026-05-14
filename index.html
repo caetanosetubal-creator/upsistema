@@ -429,6 +429,15 @@ body.auth-locked .auth-screen{display:flex}
 .s-tblwrap-sac { } /* SAC sempre renderizado no DOM */
 .s-tblttl { font-size: 11px; font-weight: 700; color: #6B7280; padding: 4px 0 6px; text-transform: uppercase; letter-spacing: .06em; }
 .only-print { display: none; }
+.s-allprint{display:none}
+.s-allprint-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.s-allprint-card{border:1px solid #E5E7EB;border-radius:10px;padding:10px 12px;background:#fff;break-inside:avoid;page-break-inside:avoid}
+.s-allprint-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:6px}
+.s-allprint-top b{font-size:13px;color:#111827}
+.s-allprint-badge{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#6B7280}
+.s-allprint-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.s-allprint-meta div{font-size:11px;color:#475569;line-height:1.35}
+.s-allprint-meta span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94A3B8;margin-bottom:1px}
 
 /* ── Impressão ── */
 @media print {
@@ -439,6 +448,14 @@ body.auth-locked .auth-screen{display:flex}
   .s-tblttl { display: block !important; }
   .only-print { display: block !important; }
   .no-print { display: none !important; }
+  .s-allprint{display:block !important;padding:12px 18px 18px}
+  .s-allprint-grid{display:grid !important;grid-template-columns:1fr !important;gap:6px !important}
+  .s-allprint-card{padding:8px 10px !important;border-radius:8px !important}
+  .s-allprint-top{margin-bottom:4px !important}
+  .s-allprint-top b{font-size:12px !important}
+  .s-allprint-meta{gap:4px 10px !important}
+  .s-allprint-meta div{font-size:10px !important}
+  .s-allprint-meta span{font-size:9px !important}
   /* Sem data: colunas = Parc | Valor | Amort | Juros → mostra só 1 e 2, oculta 3+ */
   .s-tbl th:nth-child(n+3), .s-tbl td:nth-child(n+3) { display: none !important; }
   /* Com data: colunas = Parc | Vencimento | Valor | Amort | Juros → mostra 1, 2, 3; oculta 4+ */
@@ -2858,7 +2875,21 @@ function simTodas(VT,pm2,cor,area,pricing){
     {l:'Ent.25%+12×',d:'7,5%',f:0.925,t:'e25'},{l:'3 Vezes',d:'15%',f:0.85,t:'3x'},
     {l:'6x',d:'10%',f:0.90,t:'6x'},{l:'12x',d:'5%',f:0.95,t:'12x'}];
 
-  var rows=C.map(function(c){
+  function printCard(titulo,regra,valorFinal,entrada,pagamento,obs){
+    return '<div class="s-allprint-card">'
+      +'<div class="s-allprint-top"><b>'+titulo+'</b><span class="s-allprint-badge">'+regra+'</span></div>'
+      +'<div class="s-allprint-meta">'
+      +'<div><span>Valor final</span>'+valorFinal+'</div>'
+      +'<div><span>Entrada</span>'+entrada+'</div>'
+      +'<div><span>Parcela / pagamento</span>'+pagamento+'</div>'
+      +'<div><span>Observações</span>'+obs+'</div>'
+      +'</div></div>';
+  }
+
+  var rows='';
+  var printRows='';
+
+  C.forEach(function(c){
     var vf=VT*c.f,ent='—',parc='—',obs='Economia: '+simBRL(VT-vf);
     if(c.t==='av')parc='Pagamento único';
     else if(c.t==='e50'){ent=simBRL(vf*.5);parc=simBRL(vf*.5/12)+'/mês';}
@@ -2867,37 +2898,44 @@ function simTodas(VT,pm2,cor,area,pricing){
     else if(c.t==='6x')parc=simBRL(vf/6)+'/mês';
     else if(c.t==='12x')parc=simBRL(vf/12)+'/mês';
 
-    obs += '<br><small>Valor médio por m²: '+simPM2(area ? (vf/area) : (pm2*c.f))+'</small>';
+    var obsTela=obs + '<br><small>Valor médio por m²: '+simPM2(area ? (vf/area) : (pm2*c.f))+'</small>';
 
-    return '<tr><td><b>'+c.l+'</b></td>'
+    rows += '<tr><td><b>'+c.l+'</b></td>'
       +'<td>'+c.d+'</td>'
       +'<td><b style="color:'+cor+'">'+simBRL(vf)+'</b></td>'
       +'<td>'+ent+'</td>'
       +'<td>'+parc+'</td>'
-      +'<td>'+obs+'</td></tr>';
-  }).join('');
+      +'<td>'+obsTela+'</td></tr>';
 
-  var rF=[36,60,90,120].map(function(n){
+    var obsPrint='Economia: '+simBRL(VT-vf)+' · Valor médio por m²: '+simPM2(area ? (vf/area) : (pm2*c.f));
+    printRows += printCard(c.l,c.d,simBRL(vf),ent,parc,obsPrint);
+  });
+
+  [36,60,90,120].forEach(function(n){
     var r=S_JUROS,pP=simPrice(VT,n,r),totP=pP*n;
     var a=VT/n,s=VT,totS=0,s1=s*r+a,sN=(s-(n-1)*a)*r+a;
     for(var i=0;i<n;i++){totS+=a+s*r;s-=a;}
-    return '<tr><td><b>'+n+'× Financiamento</b></td>'
+    rows += '<tr><td><b>'+n+'× Financiamento</b></td>'
       +'<td>12% a.a.'+(n<=36?'<br><small>Sem correção</small>':'<br><small>IPCA da 1ª à última</small>')+'</td>'
       +'<td>'+simBRL(VT)+'</td>'
       +'<td>—</td>'
       +'<td><b>Price:</b> '+simBRL(pP)+'/mês</td>'
       +'<td><small><b>Total Price:</b> '+simBRL(totP)+'<br><b>SAC:</b> '+simBRL(s1)+' → '+simBRL(sN)+'<br><b>Total SAC:</b> '+simBRL(totS)+'</small></td></tr>';
-  }).join('');
+
+    var regra='12% a.a.'+(n<=36?' · Sem correção':' · IPCA da 1ª à última');
+    var obsPrint='<b>Total Price:</b> '+simBRL(totP)+' · <b>SAC:</b> '+simBRL(s1)+' → '+simBRL(sN)+' · <b>Total SAC:</b> '+simBRL(totS);
+    printRows += printCard(n+'× Financiamento',regra,simBRL(VT),'—','Price: '+simBRL(pP)+'/mês',obsPrint);
+  });
 
   return '<div class="s-card" style="--cc:'+cor+'">'
     +'<div class="s-card-hd"><span class="s-card-ttl">Todas as Condições</span>'
     +'<span class="s-chip" style="background:'+cor+'">Comparativo</span></div>'
     +'<div style="padding:10px 18px 0;color:#64748B;font-size:12px">Compare o valor final, a entrada e a forma de pagamento de cada condição.</div>'
-    +'<div style="overflow-x:auto;padding:12px 18px 18px"><table class="s-tbl"><thead><tr>'
+    +'<div class="no-print" style="overflow-x:auto;padding:12px 18px 18px"><table class="s-tbl"><thead><tr>'
     +'<th>Condição</th><th>Desconto / Regra</th><th>Valor final</th><th>Entrada</th><th>Parcela / pagamento</th><th>Observações</th>'
-    +'</tr></thead><tbody>'+rows+rF+'</tbody></table></div></div>';
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div class="s-allprint only-print"><div class="s-allprint-grid">'+printRows+'</div></div></div>';
 }
-
 
 function sCalc(){
   var nome=(document.getElementById('s-nome').value||'').trim();
